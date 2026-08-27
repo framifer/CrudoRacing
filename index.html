@@ -696,7 +696,7 @@
 
     // ============================================================
     //  GENERAZIONE PROCEDURALE DELLA PISTA
-    //  (difficolta MEDIA, nessun ostacolo)
+    //  (CURVE PIU ACCENTUATE = piu difficile guidare)
     // ============================================================
     function buildTrack(themeKey, difficulty, seed) {
       seedRng(seed);
@@ -727,31 +727,32 @@
         const roll = rng();
         const remaining = totalSegments - i;
 
-        if (roll < 0.30) {
-          // Rettilineo
-          const len = Math.min(remaining, rngInt(16, 38));
+        // CURVE PIU ACCENTUATE: meno rettilinei (solo 18%), piu curve
+        if (roll < 0.18) {
+          // Rettilineo (piu corto e meno frequente)
+          const len = Math.min(remaining, rngInt(12, 26));
           const hill = maybeHill(difficulty);
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / len) * Math.PI);
             segments.push(makeSeg(0, hill * ease, i));
           }
 
-        } else if (roll < 0.60) {
-          // Curva semplice (MEDIO: intensita intermedia)
+        } else if (roll < 0.52) {
+          // Curva semplice (CURVE PIU ACCENTUATE: intensita alta)
           const len = Math.min(remaining, rngInt(20, 40));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = dir * (rngRange(1.0, 1.85) + difficulty * 1.6);
+          const intensity = dir * (rngRange(2.0, 3.2) + difficulty * 2.0);
           const hill = maybeHill(difficulty);
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / len) * Math.PI);
             segments.push(makeSeg(intensity * ease, hill * ease, i));
           }
 
-        } else if (roll < 0.82) {
-          // Curva a S (MEDIO)
-          const half = Math.min(Math.floor(remaining / 2), rngInt(16, 28));
+        } else if (roll < 0.78) {
+          // Curva a S (CURVE PIU ACCENTUATE)
+          const half = Math.min(Math.floor(remaining / 2), rngInt(15, 26));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = rngRange(1.25, 2.0) + difficulty * 1.6;
+          const intensity = rngRange(2.2, 3.2) + difficulty * 2.0;
           for (let s = 0; s < half && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / half) * Math.PI);
             segments.push(makeSeg(dir * intensity * ease, 0, i));
@@ -762,13 +763,13 @@
           }
 
         } else {
-          // Curva a U (MEDIO)
-          const len = Math.min(remaining, rngInt(30, 50));
+          // Curva a U / tornante (CURVE PIU ACCENTUATE: molto stretto)
+          const len = Math.min(remaining, rngInt(28, 46));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = dir * (rngRange(2.8, 3.7) + difficulty * 1.6);
+          const intensity = dir * (rngRange(4.2, 5.4) + difficulty * 2.0);
           const hill = maybeHill(difficulty) * 0.5;
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
-            const ease = Math.min(1, Math.sin((s / len) * Math.PI) * 1.5);
+            const ease = Math.min(1, Math.sin((s / len) * Math.PI) * 1.6);
             segments.push(makeSeg(intensity * ease, hill * ease, i));
           }
         }
@@ -837,7 +838,6 @@
           lap: 1,
           totalDist: 0,
           offset: rngRange(-0.6, 0.6),
-          // MEDIO: velocita avversari intermedia (74-84% circa)
           baseSpeed: phys.maxSpeed * (0.74 + difficulty * 0.10) + rngRange(-9, 9),
           curSpeed: 0
         });
@@ -1017,7 +1017,6 @@
         raceMode = "random";
         const keysArr = Object.keys(THEMES);
         const key = keysArr[rngInt(0, keysArr.length - 1)] || "normal";
-        // MEDIO: pista casuale con difficolta media
         startRace(key, rngRange(0.35, 0.6), Date.now());
 
       } else if (choice === "loadChampionship") {
@@ -1039,7 +1038,6 @@
         playSound(400, "square", 0.04);
       } else if (action === "a") {
         playSound(650, "square", 0.08);
-        // MEDIO: corsa singola con difficolta media
         startRace(BASE_TRACKS[menuIndex], 0.4, Date.now());
       } else if (action === "b") {
         state = "MENU";
@@ -1149,7 +1147,6 @@
       if (menuIndex >= len) menuIndex = 0;
     }
 
-    // MEDIO: difficolta cresce a ritmo intermedio, fino a 0.85
     function difficultyForChampionship(idx) {
       return Math.min(0.85, 0.10 + idx * 0.038);
     }
@@ -1346,13 +1343,14 @@
       if (drive.left)  playerX -= phys.steer * (0.3 + speedRatio);
       if (drive.right) playerX += phys.steer * (0.3 + speedRatio);
 
-      // MEDIO: spinta della curva intermedia (facile 0.006 / difficile 0.008)
-      playerX -= seg.curve * 0.007 * speedRatio;
+      // CURVE PIU ACCENTUATE: se vai veloce in curva ti spinge molto fuori
+      // (prima 0.007). Ora devi frenare in curva per non uscire.
+      playerX -= seg.curve * 0.011 * speedRatio;
       playerX = Math.max(-1.6, Math.min(1.6, playerX));
 
-      // MEDIO: fuori pista rallenta in modo intermedio
+      // Fuori pista: rallenta (punizione sensibile)
       if (Math.abs(playerX) > 1.0) {
-        speed *= 0.972;
+        speed *= 0.95;
         if (speed > 40 && Math.random() < 0.2) {
           playSound(100, "sawtooth", 0.05);
         }
@@ -1366,7 +1364,8 @@
     function updateRivals() {
       rivals.forEach(function (r) {
         const rSeg = segAt(r.pos);
-        const curveFactor = 1 - Math.min(0.35, Math.abs(rSeg.curve) * 0.06);
+        // Gli avversari rallentano in curva (curve piu strette = piu lenti li)
+        const curveFactor = 1 - Math.min(0.45, Math.abs(rSeg.curve) * 0.07);
         r.curSpeed += (r.baseSpeed * curveFactor - r.curSpeed) * 0.05;
         r.offset -= rSeg.curve * 0.004;
         r.offset = Math.max(-0.8, Math.min(0.8, r.offset));
@@ -1379,7 +1378,6 @@
       });
     }
 
-    // MEDIO: urtare un avversario rallenta in modo intermedio (facile 0.8 / difficile 0.55)
     function handleCollisions() {
       rivals.forEach(function (r) {
         let rel = r.pos - position;
