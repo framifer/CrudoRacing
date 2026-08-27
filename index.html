@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -303,7 +303,7 @@
     const SAVE_KEY = "cityRacingChampionship_v1";
     const LANG_KEY = "cityRacingLang";
     const RACE_TARGET_MIN = 1;
-    const TOTAL_LAPS = 5;   // MODIFICA: 5 giri per gara
+    const TOTAL_LAPS = 5;
 
     const ROAD_WIDTH_BASE = 26;
     const ROAD_WIDTH_PERSP = 240;
@@ -312,11 +312,12 @@
     const POS_FACTOR = 0.4;
 
     // ============================================================
-    //  LINGUE (Italiano / Inglese)
+    //  LINGUE (Inglese di default, Italiano via SELECT)
     // ============================================================
-    let lang = "it";
+    // MODIFICA 1: lingua predefinita = inglese
+    let lang = "en";
     try {
-      lang = localStorage.getItem(LANG_KEY) || "it";
+      lang = localStorage.getItem(LANG_KEY) || "en";
     } catch (e) { }
 
     const I18N = {
@@ -366,7 +367,6 @@
         langLabel: "LINGUA",
         toggleLangHint: "SELECT = English",
         go: "VIA",
-        // Podio
         podiumWin: "CAMPIONE!",
         podiumWinMsg: "COMPLIMENTI, HAI VINTO IL CAMPIONATO!",
         podiumSecond: "SECONDO POSTO",
@@ -420,7 +420,6 @@
         langLabel: "LANGUAGE",
         toggleLangHint: "SELECT = Italiano",
         go: "GO",
-        // Podium
         podiumWin: "CHAMPION!",
         podiumWinMsg: "CONGRATULATIONS, YOU WON THE CHAMPIONSHIP!",
         podiumSecond: "SECOND PLACE",
@@ -431,11 +430,11 @@
     };
 
     function t(key) {
-      return (I18N[lang] && I18N[lang][key]) || I18N.it[key] || key;
+      return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
     }
 
     function toggleLang() {
-      lang = (lang === "it") ? "en" : "it";
+      lang = (lang === "en") ? "it" : "en";
       try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
     }
 
@@ -456,7 +455,7 @@
     };
 
     function themeName(key) {
-      return THEME_NAMES[key][lang] || THEME_NAMES[key].it;
+      return THEME_NAMES[key][lang] || THEME_NAMES[key].en;
     }
 
     // ============================================================
@@ -564,7 +563,7 @@
     ];
 
     function colorName(i) {
-      return PLAYER_COLORS[i][lang] || PLAYER_COLORS[i].it;
+      return PLAYER_COLORS[i][lang] || PLAYER_COLORS[i].en;
     }
 
     const POINTS_TABLE = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
@@ -640,8 +639,6 @@
     // ============================================================
     //  STATO DEL GIOCO
     // ============================================================
-    // Stati: SPLASH, VEHICLE_SELECT, COLOR_SELECT, MENU, TRACK_SELECT,
-    // PRERACE, COUNTDOWN, RACING, PAUSE, FINISH, STANDINGS, PODIUM
     let state = "SPLASH";
 
     let menuIndex = 0;
@@ -674,7 +671,6 @@
     let saveFlashMs = 0;
     let splashTime = 0;
 
-    // Podio: posizione finale nel campionato (1, 2 o 3)
     let finalRank = 1;
 
     const drive = { up: false, down: false, left: false, right: false };
@@ -725,7 +721,6 @@
       const unitsPerSec = avgSpeed * POS_FACTOR * 60;
       const totalUnitsNeeded = unitsPerSec * RACE_TARGET_MIN * 60;
 
-      // MODIFICA: 5 giri fissi. La lunghezza pista si divide su 5 giri.
       totalLaps = TOTAL_LAPS;
       let totalSegments = Math.max(
         80,
@@ -757,7 +752,7 @@
           }
 
         } else if (roll < 0.62) {
-          // Curva semplice (angolata)
+          // Curva semplice
           const len = Math.min(remaining, rngInt(20, 40));
           const dir = (rng() < 0.5) ? -1 : 1;
           const intensity = dir * (rngRange(1.8, 2.7) + difficulty * 1.6);
@@ -768,7 +763,7 @@
           }
 
         } else if (roll < 0.84) {
-          // Curva a S (angolata)
+          // Curva a S
           const half = Math.min(Math.floor(remaining / 2), rngInt(16, 28));
           const dir = (rng() < 0.5) ? -1 : 1;
           const intensity = rngRange(2.0, 2.9) + difficulty * 1.6;
@@ -782,7 +777,7 @@
           }
 
         } else {
-          // Curva a U / tornante (stretto)
+          // Curva a U / tornante
           const len = Math.min(remaining, rngInt(30, 50));
           const dir = (rng() < 0.5) ? -1 : 1;
           const intensity = dir * (rngRange(3.6, 4.6) + difficulty * 1.6);
@@ -856,7 +851,6 @@
           lap: 1,
           totalDist: 0,
           offset: rngRange(-0.6, 0.6),
-          // Avversari forti e veloci (86-96% circa)
           baseSpeed: phys.maxSpeed * (0.86 + difficulty * 0.10) + rngRange(-5, 10),
           curSpeed: 0
         });
@@ -958,18 +952,54 @@
       return false;
     }
 
+    // ---- Schermata scelta veicolo (con CARICA SALVATAGGIO) ----
+    // MODIFICA 2: le voci qui sono MACCHINE / MOTORINI / (CARICA SALVATAGGIO)
+    function vehicleSelectItems() {
+      const items = ["cars", "scooters"];
+      if (hasSavedGame) items.push("loadChampionship");
+      return items;
+    }
+
     function navVehicle(action) {
       if (maybeLangToggle(action)) return;
-      if (action === "up" || action === "down") {
-        menuIndex = (menuIndex === 0) ? 1 : 0;
+      const items = vehicleSelectItems();
+
+      if (action === "up") {
+        menuIndex--;
+        playSound(400, "square", 0.04);
+      } else if (action === "down") {
+        menuIndex++;
         playSound(400, "square", 0.04);
       } else if (action === "a") {
-        vehicleType = (menuIndex === 0) ? "car" : "scooter";
-        phys = VEHICLE[vehicleType];
-        playSound(650, "square", 0.08);
-        state = "COLOR_SELECT";
-        menuIndex = 0;
+        const choice = items[(menuIndex + items.length) % items.length];
+
+        if (choice === "cars") {
+          vehicleType = "car";
+          phys = VEHICLE[vehicleType];
+          playSound(650, "square", 0.08);
+          state = "COLOR_SELECT";
+          menuIndex = 0;
+
+        } else if (choice === "scooters") {
+          vehicleType = "scooter";
+          phys = VEHICLE[vehicleType];
+          playSound(650, "square", 0.08);
+          state = "COLOR_SELECT";
+          menuIndex = 0;
+
+        } else if (choice === "loadChampionship") {
+          // Carica il salvataggio e vai direttamente al pre-gara del campionato
+          if (loadChampionship()) {
+            playSound(880, "triangle", 0.12);
+            raceMode = "championship";
+            state = "PRERACE";
+            preraceIndex = 0;
+          }
+        }
       }
+
+      if (menuIndex < 0) menuIndex = items.length - 1;
+      if (menuIndex >= items.length) menuIndex = 0;
     }
 
     function navColor(action) {
@@ -993,6 +1023,7 @@
       clampMenuIndex(PLAYER_COLORS.length);
     }
 
+    // ---- Menu principale (senza CARICA SALVATAGGIO ora) ----
     function navMainMenu(action) {
       if (maybeLangToggle(action)) return;
       const len = menuMainItems().length;
@@ -1011,10 +1042,9 @@
       clampMenuIndex(len);
     }
 
+    // MODIFICA 2: rimosso "loadChampionship" dal menu principale
     function menuMainItems() {
-      const items = ["championship", "singleRace", "randomTrack"];
-      if (hasSavedGame) items.push("loadChampionship");
-      return items;
+      return ["championship", "singleRace", "randomTrack"];
     }
 
     function selectMainMenu() {
@@ -1038,13 +1068,6 @@
         const keysArr = Object.keys(THEMES);
         const key = keysArr[rngInt(0, keysArr.length - 1)] || "normal";
         startRace(key, rngRange(0.35, 0.6), Date.now());
-
-      } else if (choice === "loadChampionship") {
-        if (loadChampionship()) {
-          raceMode = "championship";
-          state = "PRERACE";
-          preraceIndex = 0;
-        }
       }
     }
 
@@ -1260,7 +1283,6 @@
       return (lap - 1) * track.lengthUnits + position;
     }
 
-    // Calcola la posizione finale del giocatore nella classifica campionato
     function computeFinalRank() {
       const sorted = championshipStandings.slice().sort(function (a, b) {
         return b.points - a.points;
@@ -1329,7 +1351,6 @@
         return;
       }
 
-      // Il podio ha una piccola animazione (splashTime riusato come timer)
       if (state === "PODIUM") {
         splashTime += dt;
         return;
@@ -1380,7 +1401,6 @@
       if (drive.left)  playerX -= phys.steer * (0.3 + speedRatio);
       if (drive.right) playerX += phys.steer * (0.3 + speedRatio);
 
-      // La curva ti spinge fuori: sterzare + rallentare
       playerX -= seg.curve * 0.0095 * speedRatio;
       playerX = Math.max(-1.6, Math.min(1.6, playerX));
 
@@ -1463,12 +1483,10 @@
       }
       championshipIndex++;
       if (championshipIndex >= CHAMP_TOTAL) {
-        // Campionato finito: se tra i primi 3, mostra il podio
         finalRank = computeFinalRank();
         if (finalRank <= 3) {
           splashTime = 0;
           state = "PODIUM";
-          // suono di vittoria
           playSound(880, "triangle", 0.2);
           setTimeout(function () { playSound(1100, "triangle", 0.2); }, 180);
           setTimeout(function () { playSound(1320, "triangle", 0.3); }, 360);
@@ -1614,11 +1632,9 @@
     //  SCHERMATA PODIO (fine campionato, top 3)
     // ============================================================
     function drawPodium() {
-      // Sfondo festoso
       const bgTop = (finalRank === 1) ? "#1a2a5a" : "#141830";
       px(0, 0, 320, 320, bgTop);
 
-      // Coriandoli animati
       for (let i = 0; i < 30; i++) {
         const cx = (i * 97 + Math.floor(splashTime / 30) * (i % 3 + 1)) % 320;
         const cy = (i * 53 + Math.floor(splashTime / 20) * (i % 2 + 1)) % 260 + 10;
@@ -1626,7 +1642,6 @@
         px(cx, cy, 3, 3, colors[i % colors.length]);
       }
 
-      // Titolo in base al posto
       ctx.textAlign = "center";
       let titleColor, titleText, msgText;
       if (finalRank === 1) {
@@ -1647,23 +1662,17 @@
       ctx.font = "bold 22px monospace";
       ctx.fillText(titleText, 160, 40);
 
-      // ---- PODIO a 3 gradini ----
-      // gradino 2 (sinistra), gradino 1 (centro, piu alto), gradino 3 (destra)
       const baseY = 250;
-      // Gradino 2° (argento)
       px(70, baseY - 40, 50, 40, "#b8b8c0");
       px(70, baseY - 40, 50, 4, "#d8d8e0");
       ctx.fillStyle = "#333"; ctx.font = "bold 16px monospace"; ctx.fillText("2", 95, baseY - 18);
-      // Gradino 1° (oro, piu alto)
       px(135, baseY - 62, 50, 62, "#f0c000");
       px(135, baseY - 62, 50, 4, "#ffe070");
       ctx.fillStyle = "#5a4400"; ctx.fillText("1", 160, baseY - 38);
-      // Gradino 3° (bronzo)
       px(200, baseY - 26, 50, 26, "#cd7f32");
       px(200, baseY - 26, 50, 4, "#e0a050");
       ctx.fillStyle = "#3a2410"; ctx.fillText("3", 225, baseY - 10);
 
-      // ---- OMINO del giocatore sul gradino giusto ----
       let manX, manBaseY;
       if (finalRank === 1) { manX = 160; manBaseY = baseY - 62; }
       else if (finalRank === 2) { manX = 95; manBaseY = baseY - 40; }
@@ -1671,7 +1680,6 @@
 
       drawCelebratingMan(manX, manBaseY, playerColor);
 
-      // Frase di congratulazioni (a capo automatico semplice)
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 11px monospace";
       wrapText(msgText, 160, 278, 300, 15);
@@ -1682,39 +1690,26 @@
       ctx.textAlign = "left";
     }
 
-    // Omino pixel che festeggia (braccia alzate)
     function drawCelebratingMan(cx, footY, color) {
-      // footY = dove poggiano i piedi (cima del gradino)
-      // gambe
       px(cx - 6, footY - 14, 5, 14, "#2a3a6a");
       px(cx + 1, footY - 14, 5, 14, "#2a3a6a");
-      // scarpe
       px(cx - 7, footY - 3, 6, 3, "#222");
       px(cx + 1, footY - 3, 6, 3, "#222");
-      // corpo (maglia col colore del giocatore)
       px(cx - 8, footY - 30, 16, 17, color);
-      // braccia alzate (festa)
       px(cx - 13, footY - 40, 5, 14, color);
       px(cx + 8, footY - 40, 5, 14, color);
-      // mani
       px(cx - 13, footY - 44, 5, 5, "#f0c090");
       px(cx + 8, footY - 44, 5, 5, "#f0c090");
-      // testa
       px(cx - 6, footY - 44, 12, 12, "#f0c090");
-      // capelli
       px(cx - 6, footY - 44, 12, 4, "#5a3a1a");
-      // sorriso
       px(cx - 3, footY - 36, 6, 2, "#7a3a1a");
-      // medaglia
       const medal = (finalRank === 1) ? "#f0c000" : (finalRank === 2) ? "#c8c8d0" : "#cd7f32";
       px(cx - 3, footY - 26, 6, 6, medal);
     }
 
-    // Testo su piu righe centrato
     function wrapText(text, x, y, maxWidth, lineHeight) {
       const words = text.split(" ");
       let line = "";
-      let curY = y;
       const lines = [];
       for (let n = 0; n < words.length; n++) {
         const test = line + words[n] + " ";
@@ -1727,7 +1722,7 @@
       }
       lines.push(line.trim());
       for (let i = 0; i < lines.length; i++) {
-        ctx.fillText(lines[i], x, curY + i * lineHeight);
+        ctx.fillText(lines[i], x, y + i * lineHeight);
       }
     }
 
@@ -2218,6 +2213,7 @@
       ctx.textAlign = "left";
     }
 
+    // Schermata scelta veicolo: MACCHINE / MOTORINI / (CARICA SALVATAGGIO)
     function drawVehicleSelect() {
       ctx.fillStyle = "#101828";
       ctx.fillRect(0, 0, 320, 320);
@@ -2225,38 +2221,41 @@
 
       ctx.fillStyle = "#dc0000";
       ctx.font = "bold 20px monospace";
-      ctx.fillText(t("title"), 160, 44);
+      ctx.fillText(t("title"), 160, 40);
 
       ctx.fillStyle = "#f8d820";
       ctx.font = "bold 13px monospace";
-      ctx.fillText(t("chooseVehicle"), 160, 74);
+      ctx.fillText(t("chooseVehicle"), 160, 66);
 
-      const opts = [t("cars"), t("scooters")];
-      opts.forEach(function (o, idx) {
-        const y = 140 + idx * 38;
-        ctx.font = "bold 17px monospace";
+      const items = vehicleSelectItems();
+      ctx.font = "bold 16px monospace";
+      items.forEach(function (key, idx) {
+        const label = t(key);
+        const y = 108 + idx * 32;
         if (idx === menuIndex) {
           ctx.fillStyle = "#00e5ff";
-          ctx.fillText("> " + o + " <", 160, y);
+          ctx.fillText("> " + label + " <", 160, y);
         } else {
           ctx.fillStyle = "#aaa";
-          ctx.fillText(o, 160, y);
+          ctx.fillText(label, 160, y);
         }
       });
 
-      if (menuIndex === 0) {
-        drawCarSprite(160, 246, 2.0, "#1aa3f0");
-      } else {
-        drawScooterSprite(160, 248, 2.0, "#1aa3f0");
+      // anteprima del veicolo evidenziato (auto o scooter)
+      const highlighted = items[(menuIndex + items.length) % items.length];
+      if (highlighted === "cars") {
+        drawCarSprite(160, 236, 1.9, "#1aa3f0");
+      } else if (highlighted === "scooters") {
+        drawScooterSprite(160, 238, 1.9, "#1aa3f0");
       }
 
       ctx.fillStyle = "#7ad0ff";
       ctx.font = "bold 10px monospace";
-      ctx.fillText(t("langLabel") + ": " + lang.toUpperCase() + "  (" + t("toggleLangHint") + ")", 160, 290);
+      ctx.fillText(t("langLabel") + ": " + lang.toUpperCase() + "  (" + t("toggleLangHint") + ")", 160, 292);
 
       ctx.fillStyle = "#666";
       ctx.font = "bold 9px monospace";
-      ctx.fillText(t("navChoose"), 160, 307);
+      ctx.fillText(t("navChoose"), 160, 308);
       ctx.textAlign = "left";
     }
 
