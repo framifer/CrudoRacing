@@ -303,6 +303,7 @@
     const SAVE_KEY = "cityRacingChampionship_v1";
     const LANG_KEY = "cityRacingLang";
     const RACE_TARGET_MIN = 1;
+    const TOTAL_LAPS = 5;   // MODIFICA: 5 giri per gara
 
     const ROAD_WIDTH_BASE = 26;
     const ROAD_WIDTH_PERSP = 240;
@@ -364,7 +365,14 @@
         aForMenu: "A per tornare al menu",
         langLabel: "LINGUA",
         toggleLangHint: "SELECT = English",
-        go: "VIA"
+        go: "VIA",
+        // Podio
+        podiumWin: "CAMPIONE!",
+        podiumWinMsg: "COMPLIMENTI, HAI VINTO IL CAMPIONATO!",
+        podiumSecond: "SECONDO POSTO",
+        podiumSecondMsg: "SEI ARRIVATO SECONDO",
+        podiumThird: "TERZO POSTO",
+        podiumThirdMsg: "SEI ARRIVATO TERZO"
       },
       en: {
         title: "CRUDO RACING",
@@ -411,7 +419,14 @@
         aForMenu: "A to return to menu",
         langLabel: "LANGUAGE",
         toggleLangHint: "SELECT = Italiano",
-        go: "GO"
+        go: "GO",
+        // Podium
+        podiumWin: "CHAMPION!",
+        podiumWinMsg: "CONGRATULATIONS, YOU WON THE CHAMPIONSHIP!",
+        podiumSecond: "SECOND PLACE",
+        podiumSecondMsg: "YOU FINISHED SECOND",
+        podiumThird: "THIRD PLACE",
+        podiumThirdMsg: "YOU FINISHED THIRD"
       }
     };
 
@@ -625,6 +640,8 @@
     // ============================================================
     //  STATO DEL GIOCO
     // ============================================================
+    // Stati: SPLASH, VEHICLE_SELECT, COLOR_SELECT, MENU, TRACK_SELECT,
+    // PRERACE, COUNTDOWN, RACING, PAUSE, FINISH, STANDINGS, PODIUM
     let state = "SPLASH";
 
     let menuIndex = 0;
@@ -637,7 +654,7 @@
     let championshipStandings = [];
 
     let track = null;
-    let totalLaps = 2;
+    let totalLaps = TOTAL_LAPS;
 
     let playerX = 0;
     let position = 0;
@@ -656,6 +673,9 @@
     let standingsReturn = "PRERACE";
     let saveFlashMs = 0;
     let splashTime = 0;
+
+    // Podio: posizione finale nel campionato (1, 2 o 3)
+    let finalRank = 1;
 
     const drive = { up: false, down: false, left: false, right: false };
     const keyHeld = { a: false, b: false };
@@ -696,7 +716,6 @@
 
     // ============================================================
     //  GENERAZIONE PROCEDURALE DELLA PISTA
-    //  (CURVE PIU ACCENTUATE = piu difficile guidare)
     // ============================================================
     function buildTrack(themeKey, difficulty, seed) {
       seedRng(seed);
@@ -706,7 +725,8 @@
       const unitsPerSec = avgSpeed * POS_FACTOR * 60;
       const totalUnitsNeeded = unitsPerSec * RACE_TARGET_MIN * 60;
 
-      totalLaps = rngInt(2, 3);
+      // MODIFICA: 5 giri fissi. La lunghezza pista si divide su 5 giri.
+      totalLaps = TOTAL_LAPS;
       let totalSegments = Math.max(
         80,
         Math.round((totalUnitsNeeded / totalLaps) / SEGMENT_LENGTH)
@@ -727,32 +747,31 @@
         const roll = rng();
         const remaining = totalSegments - i;
 
-        // CURVE PIU ACCENTUATE: meno rettilinei (solo 18%), piu curve
-        if (roll < 0.18) {
-          // Rettilineo (piu corto e meno frequente)
-          const len = Math.min(remaining, rngInt(12, 26));
+        if (roll < 0.32) {
+          // Rettilineo
+          const len = Math.min(remaining, rngInt(18, 42));
           const hill = maybeHill(difficulty);
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / len) * Math.PI);
             segments.push(makeSeg(0, hill * ease, i));
           }
 
-        } else if (roll < 0.52) {
-          // Curva semplice (CURVE PIU ACCENTUATE: intensita alta)
+        } else if (roll < 0.62) {
+          // Curva semplice (angolata)
           const len = Math.min(remaining, rngInt(20, 40));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = dir * (rngRange(2.0, 3.2) + difficulty * 2.0);
+          const intensity = dir * (rngRange(1.8, 2.7) + difficulty * 1.6);
           const hill = maybeHill(difficulty);
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / len) * Math.PI);
             segments.push(makeSeg(intensity * ease, hill * ease, i));
           }
 
-        } else if (roll < 0.78) {
-          // Curva a S (CURVE PIU ACCENTUATE)
-          const half = Math.min(Math.floor(remaining / 2), rngInt(15, 26));
+        } else if (roll < 0.84) {
+          // Curva a S (angolata)
+          const half = Math.min(Math.floor(remaining / 2), rngInt(16, 28));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = rngRange(2.2, 3.2) + difficulty * 2.0;
+          const intensity = rngRange(2.0, 2.9) + difficulty * 1.6;
           for (let s = 0; s < half && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / half) * Math.PI);
             segments.push(makeSeg(dir * intensity * ease, 0, i));
@@ -763,13 +782,13 @@
           }
 
         } else {
-          // Curva a U / tornante (CURVE PIU ACCENTUATE: molto stretto)
-          const len = Math.min(remaining, rngInt(28, 46));
+          // Curva a U / tornante (stretto)
+          const len = Math.min(remaining, rngInt(30, 50));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = dir * (rngRange(4.2, 5.4) + difficulty * 2.0);
+          const intensity = dir * (rngRange(3.6, 4.6) + difficulty * 1.6);
           const hill = maybeHill(difficulty) * 0.5;
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
-            const ease = Math.min(1, Math.sin((s / len) * Math.PI) * 1.6);
+            const ease = Math.min(1, Math.sin((s / len) * Math.PI) * 1.5);
             segments.push(makeSeg(intensity * ease, hill * ease, i));
           }
         }
@@ -778,7 +797,6 @@
       totalSegments = segments.length;
       const lengthUnits = totalSegments * SEGMENT_LENGTH;
 
-      // Nessun ostacolo
       const obstacles = [];
 
       return {
@@ -838,7 +856,8 @@
           lap: 1,
           totalDist: 0,
           offset: rngRange(-0.6, 0.6),
-          baseSpeed: phys.maxSpeed * (0.74 + difficulty * 0.10) + rngRange(-9, 9),
+          // Avversari forti e veloci (86-96% circa)
+          baseSpeed: phys.maxSpeed * (0.86 + difficulty * 0.10) + rngRange(-5, 10),
           curSpeed: 0
         });
       }
@@ -874,6 +893,7 @@
         case "PAUSE":     navPause(action); break;
         case "FINISH":    if (action === "a" || action === "start") afterFinish(); break;
         case "STANDINGS": if (action === "a" || action === "start") afterStandings(); break;
+        case "PODIUM":    if (action === "a" || action === "start") { state = "MENU"; menuIndex = 0; raceMode = "single"; } break;
       }
     }
 
@@ -1240,6 +1260,17 @@
       return (lap - 1) * track.lengthUnits + position;
     }
 
+    // Calcola la posizione finale del giocatore nella classifica campionato
+    function computeFinalRank() {
+      const sorted = championshipStandings.slice().sort(function (a, b) {
+        return b.points - a.points;
+      });
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i].isPlayer) return i + 1;
+      }
+      return sorted.length;
+    }
+
     // ============================================================
     //  SALVATAGGIO / CARICAMENTO (localStorage)
     // ============================================================
@@ -1298,6 +1329,12 @@
         return;
       }
 
+      // Il podio ha una piccola animazione (splashTime riusato come timer)
+      if (state === "PODIUM") {
+        splashTime += dt;
+        return;
+      }
+
       if (state === "COUNTDOWN") {
         countdownMs -= dt;
         updateEngineSound(0);
@@ -1343,14 +1380,12 @@
       if (drive.left)  playerX -= phys.steer * (0.3 + speedRatio);
       if (drive.right) playerX += phys.steer * (0.3 + speedRatio);
 
-      // CURVE PIU ACCENTUATE: se vai veloce in curva ti spinge molto fuori
-      // (prima 0.007). Ora devi frenare in curva per non uscire.
-      playerX -= seg.curve * 0.011 * speedRatio;
+      // La curva ti spinge fuori: sterzare + rallentare
+      playerX -= seg.curve * 0.0095 * speedRatio;
       playerX = Math.max(-1.6, Math.min(1.6, playerX));
 
-      // Fuori pista: rallenta (punizione sensibile)
       if (Math.abs(playerX) > 1.0) {
-        speed *= 0.95;
+        speed *= 0.955;
         if (speed > 40 && Math.random() < 0.2) {
           playSound(100, "sawtooth", 0.05);
         }
@@ -1364,8 +1399,7 @@
     function updateRivals() {
       rivals.forEach(function (r) {
         const rSeg = segAt(r.pos);
-        // Gli avversari rallentano in curva (curve piu strette = piu lenti li)
-        const curveFactor = 1 - Math.min(0.45, Math.abs(rSeg.curve) * 0.07);
+        const curveFactor = 1 - Math.min(0.35, Math.abs(rSeg.curve) * 0.06);
         r.curSpeed += (r.baseSpeed * curveFactor - r.curSpeed) * 0.05;
         r.offset -= rSeg.curve * 0.004;
         r.offset = Math.max(-0.8, Math.min(0.8, r.offset));
@@ -1384,7 +1418,7 @@
         if (rel > track.lengthUnits / 2)  rel -= track.lengthUnits;
         if (rel < -track.lengthUnits / 2) rel += track.lengthUnits;
         if (Math.abs(rel) < 35 && Math.abs(playerX - r.offset) < 0.42) {
-          speed *= 0.68;
+          speed *= 0.7;
           playSound(80, "sawtooth", 0.15);
           if (playerX > r.offset) playerX += 0.13;
           else playerX -= 0.13;
@@ -1429,9 +1463,20 @@
       }
       championshipIndex++;
       if (championshipIndex >= CHAMP_TOTAL) {
-        state = "MENU";
-        menuIndex = 0;
-        raceMode = "single";
+        // Campionato finito: se tra i primi 3, mostra il podio
+        finalRank = computeFinalRank();
+        if (finalRank <= 3) {
+          splashTime = 0;
+          state = "PODIUM";
+          // suono di vittoria
+          playSound(880, "triangle", 0.2);
+          setTimeout(function () { playSound(1100, "triangle", 0.2); }, 180);
+          setTimeout(function () { playSound(1320, "triangle", 0.3); }, 360);
+        } else {
+          state = "MENU";
+          menuIndex = 0;
+          raceMode = "single";
+        }
         return;
       }
       state = "PRERACE";
@@ -1482,6 +1527,7 @@
         case "TRACK_SELECT":   return drawTrackSelect();
         case "PRERACE":        return drawPrerace();
         case "STANDINGS":      return drawStandings();
+        case "PODIUM":         return drawPodium();
       }
 
       drawScene();
@@ -1562,6 +1608,127 @@
       px(cx + 22 * s, cy + 16 * s, 10 * s, 8 * s, "#111");
       px(cx - 30 * s, cy + 18 * s, 6 * s, 4 * s, "#888");
       px(cx + 24 * s, cy + 18 * s, 6 * s, 4 * s, "#888");
+    }
+
+    // ============================================================
+    //  SCHERMATA PODIO (fine campionato, top 3)
+    // ============================================================
+    function drawPodium() {
+      // Sfondo festoso
+      const bgTop = (finalRank === 1) ? "#1a2a5a" : "#141830";
+      px(0, 0, 320, 320, bgTop);
+
+      // Coriandoli animati
+      for (let i = 0; i < 30; i++) {
+        const cx = (i * 97 + Math.floor(splashTime / 30) * (i % 3 + 1)) % 320;
+        const cy = (i * 53 + Math.floor(splashTime / 20) * (i % 2 + 1)) % 260 + 10;
+        const colors = ["#ffd84a", "#ff5555", "#44ddaa", "#8844ff", "#ffffff"];
+        px(cx, cy, 3, 3, colors[i % colors.length]);
+      }
+
+      // Titolo in base al posto
+      ctx.textAlign = "center";
+      let titleColor, titleText, msgText;
+      if (finalRank === 1) {
+        titleColor = "#ffd84a";
+        titleText = t("podiumWin");
+        msgText = t("podiumWinMsg");
+      } else if (finalRank === 2) {
+        titleColor = "#c8c8d0";
+        titleText = t("podiumSecond");
+        msgText = t("podiumSecondMsg");
+      } else {
+        titleColor = "#cd7f32";
+        titleText = t("podiumThird");
+        msgText = t("podiumThirdMsg");
+      }
+
+      ctx.fillStyle = titleColor;
+      ctx.font = "bold 22px monospace";
+      ctx.fillText(titleText, 160, 40);
+
+      // ---- PODIO a 3 gradini ----
+      // gradino 2 (sinistra), gradino 1 (centro, piu alto), gradino 3 (destra)
+      const baseY = 250;
+      // Gradino 2° (argento)
+      px(70, baseY - 40, 50, 40, "#b8b8c0");
+      px(70, baseY - 40, 50, 4, "#d8d8e0");
+      ctx.fillStyle = "#333"; ctx.font = "bold 16px monospace"; ctx.fillText("2", 95, baseY - 18);
+      // Gradino 1° (oro, piu alto)
+      px(135, baseY - 62, 50, 62, "#f0c000");
+      px(135, baseY - 62, 50, 4, "#ffe070");
+      ctx.fillStyle = "#5a4400"; ctx.fillText("1", 160, baseY - 38);
+      // Gradino 3° (bronzo)
+      px(200, baseY - 26, 50, 26, "#cd7f32");
+      px(200, baseY - 26, 50, 4, "#e0a050");
+      ctx.fillStyle = "#3a2410"; ctx.fillText("3", 225, baseY - 10);
+
+      // ---- OMINO del giocatore sul gradino giusto ----
+      let manX, manBaseY;
+      if (finalRank === 1) { manX = 160; manBaseY = baseY - 62; }
+      else if (finalRank === 2) { manX = 95; manBaseY = baseY - 40; }
+      else { manX = 225; manBaseY = baseY - 26; }
+
+      drawCelebratingMan(manX, manBaseY, playerColor);
+
+      // Frase di congratulazioni (a capo automatico semplice)
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 11px monospace";
+      wrapText(msgText, 160, 278, 300, 15);
+
+      ctx.fillStyle = "#888";
+      ctx.font = "bold 9px monospace";
+      ctx.fillText(t("continueA"), 160, 312);
+      ctx.textAlign = "left";
+    }
+
+    // Omino pixel che festeggia (braccia alzate)
+    function drawCelebratingMan(cx, footY, color) {
+      // footY = dove poggiano i piedi (cima del gradino)
+      // gambe
+      px(cx - 6, footY - 14, 5, 14, "#2a3a6a");
+      px(cx + 1, footY - 14, 5, 14, "#2a3a6a");
+      // scarpe
+      px(cx - 7, footY - 3, 6, 3, "#222");
+      px(cx + 1, footY - 3, 6, 3, "#222");
+      // corpo (maglia col colore del giocatore)
+      px(cx - 8, footY - 30, 16, 17, color);
+      // braccia alzate (festa)
+      px(cx - 13, footY - 40, 5, 14, color);
+      px(cx + 8, footY - 40, 5, 14, color);
+      // mani
+      px(cx - 13, footY - 44, 5, 5, "#f0c090");
+      px(cx + 8, footY - 44, 5, 5, "#f0c090");
+      // testa
+      px(cx - 6, footY - 44, 12, 12, "#f0c090");
+      // capelli
+      px(cx - 6, footY - 44, 12, 4, "#5a3a1a");
+      // sorriso
+      px(cx - 3, footY - 36, 6, 2, "#7a3a1a");
+      // medaglia
+      const medal = (finalRank === 1) ? "#f0c000" : (finalRank === 2) ? "#c8c8d0" : "#cd7f32";
+      px(cx - 3, footY - 26, 6, 6, medal);
+    }
+
+    // Testo su piu righe centrato
+    function wrapText(text, x, y, maxWidth, lineHeight) {
+      const words = text.split(" ");
+      let line = "";
+      let curY = y;
+      const lines = [];
+      for (let n = 0; n < words.length; n++) {
+        const test = line + words[n] + " ";
+        if (ctx.measureText(test).width > maxWidth && line !== "") {
+          lines.push(line.trim());
+          line = words[n] + " ";
+        } else {
+          line = test;
+        }
+      }
+      lines.push(line.trim());
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], x, curY + i * lineHeight);
+      }
     }
 
     // ============================================================
