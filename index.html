@@ -13,7 +13,7 @@
     }
 
     :root {
-      --gb-body: #c4cfa1;   /* colore scocca GameBoy */
+      --gb-body: #c4cfa1;
     }
 
     body {
@@ -137,7 +137,6 @@
       border-radius: 12px 0 0 12px;
     }
 
-    /* Freccia destra spostata piu a destra */
     .dpad-right {
       top: 67px;
       right: 0;
@@ -299,19 +298,16 @@
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    const NUM_RIVALS = 14;              // avversari
-    const NUM_RACERS = NUM_RIVALS + 1;  // avversari + giocatore
+    const NUM_RIVALS = 14;
+    const NUM_RACERS = NUM_RIVALS + 1;
     const SAVE_KEY = "cityRacingChampionship_v1";
     const LANG_KEY = "cityRacingLang";
-    const RACE_TARGET_MIN = 1;          // durata gara in minuti
+    const RACE_TARGET_MIN = 1;
 
-    // Larghezza pista (piu alto = piu larga)
     const ROAD_WIDTH_BASE = 26;
     const ROAD_WIDTH_PERSP = 240;
 
-    // Un "segmento" di pista
     const SEGMENT_LENGTH = 100;
-    // Quanto avanza la posizione per unita di velocita
     const POS_FACTOR = 0.4;
 
     // ============================================================
@@ -320,7 +316,7 @@
     let lang = "it";
     try {
       lang = localStorage.getItem(LANG_KEY) || "it";
-    } catch (e) { /* localStorage non disponibile */ }
+    } catch (e) { }
 
     const I18N = {
       it: {
@@ -429,7 +425,7 @@
     }
 
     // ============================================================
-    //  NOMI DEI TEMI (piste) nelle due lingue
+    //  NOMI DEI TEMI
     // ============================================================
     const THEME_NAMES = {
       normal:         { it: "NORMALE",         en: "NORMAL" },
@@ -534,13 +530,12 @@
       }
     };
 
-    // Le 10 piste base, ripetute due volte = campionato di 20 gare
     const BASE_TRACKS = [
       "normal", "city", "islands", "mountain", "desert",
       "normalNight", "cityNight", "islandsSunset", "mountainSunset", "desertNight"
     ];
     const CHAMPIONSHIP_ORDER = BASE_TRACKS.concat(BASE_TRACKS);
-    const CHAMP_TOTAL = CHAMPIONSHIP_ORDER.length; // 20
+    const CHAMP_TOTAL = CHAMPIONSHIP_ORDER.length;
 
     const PLAYER_COLORS = [
       { it: "ROSSO",     en: "RED",    v: "#dc0000" },
@@ -690,7 +685,7 @@
     }
 
     // ============================================================
-    //  ACCESSO SICURO AI SEGMENTI DELLA PISTA
+    //  ACCESSO SICURO AI SEGMENTI
     // ============================================================
     function segAt(pos) {
       const n = track.totalSegments;
@@ -701,7 +696,7 @@
 
     // ============================================================
     //  GENERAZIONE PROCEDURALE DELLA PISTA
-    //  (NESSUN OSTACOLO)
+    //  (curve piu dolci = PIU FACILE, nessun ostacolo)
     // ============================================================
     function buildTrack(themeKey, difficulty, seed) {
       seedRng(seed);
@@ -732,31 +727,31 @@
         const roll = rng();
         const remaining = totalSegments - i;
 
-        if (roll < 0.25) {
-          // Rettilineo
-          const len = Math.min(remaining, rngInt(15, 35));
+        if (roll < 0.35) {
+          // Rettilineo (piu probabile ora = pista piu semplice)
+          const len = Math.min(remaining, rngInt(18, 40));
           const hill = maybeHill(difficulty);
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / len) * Math.PI);
             segments.push(makeSeg(0, hill * ease, i));
           }
 
-        } else if (roll < 0.5) {
-          // Curva semplice
+        } else if (roll < 0.65) {
+          // Curva semplice (PIU FACILE: intensita ridotta)
           const len = Math.min(remaining, rngInt(20, 40));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = dir * (rngRange(1.2, 2.2) + difficulty * 2.2);
+          const intensity = dir * (rngRange(0.8, 1.5) + difficulty * 1.2);
           const hill = maybeHill(difficulty);
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / len) * Math.PI);
             segments.push(makeSeg(intensity * ease, hill * ease, i));
           }
 
-        } else if (roll < 0.75) {
-          // Curva a S
+        } else if (roll < 0.85) {
+          // Curva a S (PIU FACILE: piu morbida)
           const half = Math.min(Math.floor(remaining / 2), rngInt(16, 28));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = rngRange(1.5, 2.4) + difficulty * 2.2;
+          const intensity = rngRange(1.0, 1.6) + difficulty * 1.2;
           for (let s = 0; s < half && i < totalSegments; s++, i++) {
             const ease = Math.sin((s / half) * Math.PI);
             segments.push(makeSeg(dir * intensity * ease, 0, i));
@@ -767,13 +762,13 @@
           }
 
         } else {
-          // Curva a U (tornante)
+          // Curva a U (PIU FACILE: meno stretta di prima)
           const len = Math.min(remaining, rngInt(30, 50));
           const dir = (rng() < 0.5) ? -1 : 1;
-          const intensity = dir * (rngRange(3.5, 4.5) + difficulty * 2.0);
+          const intensity = dir * (rngRange(2.2, 3.0) + difficulty * 1.2);
           const hill = maybeHill(difficulty) * 0.5;
           for (let s = 0; s < len && i < totalSegments; s++, i++) {
-            const ease = Math.min(1, Math.sin((s / len) * Math.PI) * 1.6);
+            const ease = Math.min(1, Math.sin((s / len) * Math.PI) * 1.4);
             segments.push(makeSeg(intensity * ease, hill * ease, i));
           }
         }
@@ -782,7 +777,7 @@
       totalSegments = segments.length;
       const lengthUnits = totalSegments * SEGMENT_LENGTH;
 
-      // Nessun ostacolo: lista vuota
+      // Nessun ostacolo
       const obstacles = [];
 
       return {
@@ -842,7 +837,8 @@
           lap: 1,
           totalDist: 0,
           offset: rngRange(-0.6, 0.6),
-          baseSpeed: phys.maxSpeed * (0.82 + difficulty * 0.12) + rngRange(-8, 12),
+          // PIU FACILE: avversari piu lenti (prima 0.82 + diff*0.12)
+          baseSpeed: phys.maxSpeed * (0.68 + difficulty * 0.10) + rngRange(-10, 8),
           curSpeed: 0
         });
       }
@@ -1021,7 +1017,8 @@
         raceMode = "random";
         const keysArr = Object.keys(THEMES);
         const key = keysArr[rngInt(0, keysArr.length - 1)] || "normal";
-        startRace(key, rngRange(0.3, 0.7), Date.now());
+        // PIU FACILE: pista casuale con difficolta bassa
+        startRace(key, rngRange(0.2, 0.45), Date.now());
 
       } else if (choice === "loadChampionship") {
         if (loadChampionship()) {
@@ -1042,7 +1039,8 @@
         playSound(400, "square", 0.04);
       } else if (action === "a") {
         playSound(650, "square", 0.08);
-        startRace(BASE_TRACKS[menuIndex], 0.45, Date.now());
+        // PIU FACILE: corsa singola con difficolta bassa (prima 0.45)
+        startRace(BASE_TRACKS[menuIndex], 0.25, Date.now());
       } else if (action === "b") {
         state = "MENU";
         menuIndex = 1;
@@ -1151,8 +1149,9 @@
       if (menuIndex >= len) menuIndex = 0;
     }
 
+    // PIU FACILE: difficolta cresce piu lentamente (prima 0.15 + idx*0.045)
     function difficultyForChampionship(idx) {
-      return Math.min(1, 0.15 + idx * 0.045);
+      return Math.min(0.7, 0.05 + idx * 0.03);
     }
 
     // ============================================================
@@ -1347,11 +1346,13 @@
       if (drive.left)  playerX -= phys.steer * (0.3 + speedRatio);
       if (drive.right) playerX += phys.steer * (0.3 + speedRatio);
 
-      playerX -= seg.curve * 0.008 * speedRatio;
+      // PIU FACILE: la curva ti spinge di meno (prima 0.008)
+      playerX -= seg.curve * 0.006 * speedRatio;
       playerX = Math.max(-1.6, Math.min(1.6, playerX));
 
+      // PIU FACILE: fuori pista rallenta meno (prima *0.96)
       if (Math.abs(playerX) > 1.0) {
-        speed *= 0.96;
+        speed *= 0.985;
         if (speed > 40 && Math.random() < 0.2) {
           playSound(100, "sawtooth", 0.05);
         }
@@ -1378,17 +1379,17 @@
       });
     }
 
-    // Solo collisioni con gli avversari (niente piu ostacoli)
+    // PIU FACILE: urtare un avversario rallenta meno (prima *0.55)
     function handleCollisions() {
       rivals.forEach(function (r) {
         let rel = r.pos - position;
         if (rel > track.lengthUnits / 2)  rel -= track.lengthUnits;
         if (rel < -track.lengthUnits / 2) rel += track.lengthUnits;
         if (Math.abs(rel) < 35 && Math.abs(playerX - r.offset) < 0.42) {
-          speed *= 0.55;
+          speed *= 0.8;
           playSound(80, "sawtooth", 0.15);
-          if (playerX > r.offset) playerX += 0.15;
-          else playerX -= 0.15;
+          if (playerX > r.offset) playerX += 0.12;
+          else playerX -= 0.12;
         }
       });
     }
@@ -1774,7 +1775,6 @@
       }
     }
 
-    // Disegna gli avversari (nessun ostacolo)
     function drawWorldSprites(horizonY, roadHeight) {
       const sprites = [];
 
