@@ -81,23 +81,24 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 30px 22px 40px;
+      padding: 30px 18px 40px;
       border-top: 4px solid #555;
     }
 
     .controls-top {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       width: 100%;
-      padding: 0 6px;
+      padding: 0 4px;
     }
 
-    /* ----- D-PAD (frecce direzionali) piu grande ----- */
+    /* ----- D-PAD (frecce direzionali) ----- */
     .dpad {
       position: relative;
-      width: 180px;
-      height: 180px;
+      width: 190px;
+      height: 190px;
+      flex-shrink: 0;
       filter: drop-shadow(3px 6px 5px rgba(0, 0, 0, 0.4));
     }
 
@@ -114,32 +115,33 @@
 
     .dpad-up {
       top: 0;
-      left: 62px;
+      left: 67px;
       width: 56px;
-      height: 64px;
+      height: 67px;
       border-radius: 12px 12px 0 0;
     }
 
     .dpad-down {
       bottom: 0;
-      left: 62px;
+      left: 67px;
       width: 56px;
-      height: 64px;
+      height: 67px;
       border-radius: 0 0 12px 12px;
     }
 
     .dpad-left {
-      top: 62px;
+      top: 67px;
       left: 0;
-      width: 64px;
+      width: 67px;
       height: 56px;
       border-radius: 12px 0 0 12px;
     }
 
+    /* Freccia destra spostata piu a destra */
     .dpad-right {
-      top: 62px;
+      top: 67px;
       right: 0;
-      width: 64px;
+      width: 67px;
       height: 56px;
       border-radius: 0 12px 12px 0;
     }
@@ -154,8 +156,8 @@
     /* ----- TASTI A / B ----- */
     .action-buttons {
       display: flex;
-      align-items: flex-start;   /* permette di abbassare B */
-      gap: 22px;
+      align-items: flex-start;
+      gap: 20px;
       transform: rotate(-15deg);
       filter: drop-shadow(3px 6px 5px rgba(0, 0, 0, 0.3));
     }
@@ -164,14 +166,14 @@
       text-align: center;
     }
 
-    /* Tasto B piu in basso rispetto ad A */
+    /* Tasto B molto piu in basso rispetto ad A */
     .btn-b-container {
-      margin-top: 46px;
+      margin-top: 80px;
     }
 
     .btn-round {
-      width: 68px;
-      height: 68px;
+      width: 66px;
+      height: 66px;
       background: linear-gradient(145deg, #a72352, #6e1333);
       border-radius: 50%;
       border: none;
@@ -192,12 +194,12 @@
       background: #5b0f2a;
     }
 
-    /* ----- TASTI SELECT / START (piu in alto) ----- */
+    /* ----- TASTI SELECT / START ----- */
     .controls-bottom {
       display: flex;
       justify-content: center;
       gap: 45px;
-      margin-top: 0;             /* prima 26px: ora piu in alto */
+      margin-top: 0;
       margin-bottom: 40px;
     }
 
@@ -261,7 +263,7 @@
           <button class="dpad-btn dpad-right" id="btn-right"></button>
         </div>
 
-        <!-- Tasti A e B (B piu in basso) -->
+        <!-- Tasti A e B (B molto piu in basso) -->
         <div class="action-buttons">
           <div class="btn-round-container btn-b-container">
             <button class="btn-round" id="btn-b">B</button>
@@ -417,12 +419,10 @@
       }
     };
 
-    // Ritorna la traduzione della chiave nella lingua corrente
     function t(key) {
       return (I18N[lang] && I18N[lang][key]) || I18N.it[key] || key;
     }
 
-    // Cambia lingua e la salva
     function toggleLang() {
       lang = (lang === "it") ? "en" : "it";
       try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
@@ -449,7 +449,7 @@
     }
 
     // ============================================================
-    //  TEMI GRAFICI (colori di cielo, terreno, strada, ecc.)
+    //  TEMI GRAFICI
     // ============================================================
     const THEMES = {
       normal: {
@@ -542,7 +542,6 @@
     const CHAMPIONSHIP_ORDER = BASE_TRACKS.concat(BASE_TRACKS);
     const CHAMP_TOTAL = CHAMPIONSHIP_ORDER.length; // 20
 
-    // Colori selezionabili per il veicolo del giocatore
     const PLAYER_COLORS = [
       { it: "ROSSO",     en: "RED",    v: "#dc0000" },
       { it: "BLU",       en: "BLUE",   v: "#1560dc" },
@@ -558,7 +557,6 @@
       return PLAYER_COLORS[i][lang] || PLAYER_COLORS[i].it;
     }
 
-    // Punti assegnati in base al piazzamento (1o = 15 ... 15o = 1)
     const POINTS_TABLE = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
 
     const RIVAL_NAMES = [
@@ -572,7 +570,7 @@
     ];
 
     // ============================================================
-    //  AUDIO (motore + effetti)
+    //  AUDIO
     // ============================================================
     const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
@@ -596,7 +594,6 @@
       }
     }
 
-    // Suono del motore in base alla velocita (0..1)
     function updateEngineSound(speedRatio) {
       if (!engineOsc || !engineGain) return;
       const base = (vehicleType === "scooter") ? 90 : 50;
@@ -607,7 +604,6 @@
       engineGain.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.05);
     }
 
-    // Beep singolo
     function playSound(freq = 440, type = "square", duration = 0.08) {
       initAudio();
       const osc = audioCtx.createOscillator();
@@ -634,9 +630,6 @@
     // ============================================================
     //  STATO DEL GIOCO
     // ============================================================
-    // Stati possibili:
-    // SPLASH, VEHICLE_SELECT, COLOR_SELECT, MENU, TRACK_SELECT,
-    // PRERACE, COUNTDOWN, RACING, PAUSE, FINISH, STANDINGS
     let state = "SPLASH";
 
     let menuIndex = 0;
@@ -644,14 +637,13 @@
     let playerColorIndex = 0;
     let playerColor = PLAYER_COLORS[0].v;
 
-    let raceMode = "single";        // single | random | championship
+    let raceMode = "single";
     let championshipIndex = 0;
     let championshipStandings = [];
 
     let track = null;
     let totalLaps = 2;
 
-    // Stato della corsa in tempo reale
     let playerX = 0;
     let position = 0;
     let speed = 0;
@@ -662,21 +654,19 @@
     let countdownMs = 0;
     let showInfoOverlay = false;
 
-    // Indici dei sotto-menu
     let pauseIndex = 0;
     let preraceIndex = 0;
 
     let hasSavedGame = false;
-    let standingsReturn = "PRERACE"; // da dove torna la classifica
-    let saveFlashMs = 0;             // messaggio "salvato" temporaneo
+    let standingsReturn = "PRERACE";
+    let saveFlashMs = 0;
     let splashTime = 0;
 
-    // Stato dei comandi tenuti premuti
     const drive = { up: false, down: false, left: false, right: false };
     const keyHeld = { a: false, b: false };
 
     // ============================================================
-    //  GENERATORE CASUALE CON SEED (per piste riproducibili)
+    //  GENERATORE CASUALE CON SEED
     // ============================================================
     let rngState = 123456789;
 
@@ -701,7 +691,6 @@
 
     // ============================================================
     //  ACCESSO SICURO AI SEGMENTI DELLA PISTA
-    //  (evita crash con indici fuori range)
     // ============================================================
     function segAt(pos) {
       const n = track.totalSegments;
@@ -712,12 +701,12 @@
 
     // ============================================================
     //  GENERAZIONE PROCEDURALE DELLA PISTA
+    //  (NESSUN OSTACOLO)
     // ============================================================
     function buildTrack(themeKey, difficulty, seed) {
       seedRng(seed);
       const theme = THEMES[themeKey];
 
-      // Stima quanti segmenti servono per la durata desiderata
       const avgSpeed = phys.maxSpeed * (0.55 - difficulty * 0.1);
       const unitsPerSec = avgSpeed * POS_FACTOR * 60;
       const totalUnitsNeeded = unitsPerSec * RACE_TARGET_MIN * 60;
@@ -730,11 +719,10 @@
 
       const segments = [];
       let i = 0;
-      const startStraight = 20; // rettilineo di partenza
+      const startStraight = 20;
 
       while (i < totalSegments) {
 
-        // Primo tratto: sempre dritto
         if (i < startStraight) {
           segments.push(makeSeg(0, 0, i));
           i++;
@@ -765,7 +753,7 @@
           }
 
         } else if (roll < 0.75) {
-          // Curva a S (una direzione poi l'altra)
+          // Curva a S
           const half = Math.min(Math.floor(remaining / 2), rngInt(16, 28));
           const dir = (rng() < 0.5) ? -1 : 1;
           const intensity = rngRange(1.5, 2.4) + difficulty * 2.2;
@@ -779,7 +767,7 @@
           }
 
         } else {
-          // Curva a U (tornante stretto e lungo)
+          // Curva a U (tornante)
           const len = Math.min(remaining, rngInt(30, 50));
           const dir = (rng() < 0.5) ? -1 : 1;
           const intensity = dir * (rngRange(3.5, 4.5) + difficulty * 2.0);
@@ -794,21 +782,8 @@
       totalSegments = segments.length;
       const lengthUnits = totalSegments * SEGMENT_LENGTH;
 
-      // ---- OSTACOLI: SOLO AI BORDI DELLA PISTA ----
-      // offset in valore assoluto sempre >= 1.05 (fuori dalla corsia)
+      // Nessun ostacolo: lista vuota
       const obstacles = [];
-      const obstacleCount = Math.round(totalSegments / rngRange(9, 14));
-      for (let o = 0; o < obstacleCount; o++) {
-        const segIdx = rngInt(startStraight + 5, totalSegments - 1);
-        const side = (rng() < 0.5) ? -1 : 1;
-        const offset = side * rngRange(1.05, 1.35); // sempre a bordo pista
-        obstacles.push({
-          pos: segIdx * SEGMENT_LENGTH,
-          offset: offset,
-          type: pickObstacleType(theme),
-          h: rngRange(0.9, 1.4)
-        });
-      }
 
       return {
         themeKey: themeKey,
@@ -821,7 +796,6 @@
       };
     }
 
-    // Ogni tanto genera un dislivello (dosso)
     function maybeHill(difficulty) {
       if (rng() < (0.3 + difficulty * 0.25)) {
         return rngRange(0.5, 1.1) * (0.6 + difficulty);
@@ -829,26 +803,6 @@
       return 0;
     }
 
-    // Tipo di ostacolo in base al tema
-    function pickObstacleType(theme) {
-      switch (theme.scenery) {
-        case "buildings":
-        case "buildingsLit":
-          return "cone";
-        case "sea":
-        case "seaSunset":
-          return "palm";
-        case "snow":
-          return "tree";
-        case "dunes":
-        case "dunesNight":
-          return "cactus";
-        default:
-          return (rng() < 0.5) ? "tree" : "cone";
-      }
-    }
-
-    // Crea un singolo segmento di pista
     function makeSeg(curve, hill, i) {
       return {
         curve: curve,
@@ -864,7 +818,6 @@
     function startRace(themeKey, difficulty, seed) {
       track = buildTrack(themeKey, difficulty, seed);
 
-      // Reset stato corsa
       playerX = 0;
       position = 0;
       speed = 0;
@@ -875,7 +828,6 @@
       keyHeld.a = false;
       keyHeld.b = false;
 
-      // Crea gli avversari sparsi lungo la pista
       rivals = [];
       for (let k = 0; k < NUM_RIVALS; k++) {
         let startPos = (track.lengthUnits / NUM_RIVALS) * k + rngRange(-30, 30);
@@ -901,7 +853,6 @@
 
     // ============================================================
     //  GESTIONE INPUT
-    //  "action" = pressione singola; "drive" = tasto tenuto premuto
     // ============================================================
     function pressAction(action) {
       switch (state) {
@@ -930,7 +881,6 @@
       }
     }
 
-    // Converte un tasto della tastiera in azione o stato di guida
     function keyToInput(key, isDown) {
       switch (key) {
         case "ArrowUp": case "w": case "W":
@@ -983,7 +933,6 @@
       keyToInput(e.key, false);
     });
 
-    // SELECT cambia lingua nei menu (non in gara ne allo splash)
     function maybeLangToggle(action) {
       if (action === "select" && state !== "RACING" && state !== "SPLASH") {
         toggleLang();
@@ -993,7 +942,6 @@
       return false;
     }
 
-    // ---- Navigazione: scelta veicolo ----
     function navVehicle(action) {
       if (maybeLangToggle(action)) return;
       if (action === "up" || action === "down") {
@@ -1008,7 +956,6 @@
       }
     }
 
-    // ---- Navigazione: scelta colore ----
     function navColor(action) {
       if (maybeLangToggle(action)) return;
       if (action === "left" || action === "up") {
@@ -1030,7 +977,6 @@
       clampMenuIndex(PLAYER_COLORS.length);
     }
 
-    // ---- Navigazione: menu principale ----
     function navMainMenu(action) {
       if (maybeLangToggle(action)) return;
       const len = menuMainItems().length;
@@ -1049,7 +995,6 @@
       clampMenuIndex(len);
     }
 
-    // Voci del menu principale (aggiunge "carica" se c'e un salvataggio)
     function menuMainItems() {
       const items = ["championship", "singleRace", "randomTrack"];
       if (hasSavedGame) items.push("loadChampionship");
@@ -1087,7 +1032,6 @@
       }
     }
 
-    // ---- Navigazione: scelta pista (corsa singola) ----
     function navTrackMenu(action) {
       if (maybeLangToggle(action)) return;
       if (action === "up") {
@@ -1106,7 +1050,6 @@
       clampMenuIndex(BASE_TRACKS.length);
     }
 
-    // ---- Navigazione: schermata pre-gara (campionato) ----
     function preraceItems() {
       return ["startRace", "viewStandings", "saveChampionship", "exitToMenu"];
     }
@@ -1151,14 +1094,12 @@
       if (preraceIndex >= items.length) preraceIndex = 0;
     }
 
-    // ---- Menu pausa (durante la gara) ----
     function openPause() {
       state = "PAUSE";
       pauseIndex = 0;
       playSound(300, "square", 0.1);
     }
 
-    // Nel campionato aggiunge "Salva ed esci"
     function pauseItems() {
       if (raceMode === "championship") {
         return ["resume", "saveAndExit", "exitToMenu"];
@@ -1210,7 +1151,6 @@
       if (menuIndex >= len) menuIndex = 0;
     }
 
-    // Difficolta crescente lungo il campionato
     function difficultyForChampionship(idx) {
       return Math.min(1, 0.15 + idx * 0.045);
     }
@@ -1255,10 +1195,10 @@
     bindButton("btn-down",   { action: "down",  drive: "down" });
     bindButton("btn-left",   { action: "left",  drive: "left" });
     bindButton("btn-right",  { action: "right", drive: "right" });
-    bindButton("btn-a",      { action: "a" });     // gas / conferma
-    bindButton("btn-b",      { action: "b" });     // freno / indietro
-    bindButton("btn-select", { action: "select" }); // info / lingua
-    bindButton("btn-start",  { action: "start" });  // pausa / conferma
+    bindButton("btn-a",      { action: "a" });
+    bindButton("btn-b",      { action: "b" });
+    bindButton("btn-select", { action: "select" });
+    bindButton("btn-start",  { action: "start" });
 
     // ============================================================
     //  CLASSIFICA CAMPIONATO
@@ -1278,7 +1218,6 @@
       }
     }
 
-    // Assegna i punti in base all'ordine di arrivo
     function awardChampionshipPoints() {
       const finishing = [];
       finishing.push({ ref: getPlayerStanding(), dist: playerTotalDist() });
@@ -1306,7 +1245,7 @@
     }
 
     // ============================================================
-    //  SALVATAGGIO / CARICAMENTO (localStorage reale)
+    //  SALVATAGGIO / CARICAMENTO (localStorage)
     // ============================================================
     function saveChampionship() {
       try {
@@ -1378,7 +1317,6 @@
         return;
       }
 
-      // --- Corsa in svolgimento ---
       raceTimeMs += dt;
 
       if (isAccelerating()) {
@@ -1394,7 +1332,6 @@
       const speedRatio = speed / phys.maxSpeed;
       position += speed * POS_FACTOR;
 
-      // Giro completato
       if (position >= track.lengthUnits) {
         position -= track.lengthUnits;
         lap++;
@@ -1407,15 +1344,12 @@
 
       const seg = segAt(position);
 
-      // Sterzo
       if (drive.left)  playerX -= phys.steer * (0.3 + speedRatio);
       if (drive.right) playerX += phys.steer * (0.3 + speedRatio);
 
-      // Forza della curva
       playerX -= seg.curve * 0.008 * speedRatio;
       playerX = Math.max(-1.6, Math.min(1.6, playerX));
 
-      // Fuori pista: rallenta
       if (Math.abs(playerX) > 1.0) {
         speed *= 0.96;
         if (speed > 40 && Math.random() < 0.2) {
@@ -1431,10 +1365,8 @@
     function updateRivals() {
       rivals.forEach(function (r) {
         const rSeg = segAt(r.pos);
-        // In curva rallentano un po'
         const curveFactor = 1 - Math.min(0.35, Math.abs(rSeg.curve) * 0.06);
         r.curSpeed += (r.baseSpeed * curveFactor - r.curSpeed) * 0.05;
-        // Seguono la traiettoria della curva
         r.offset -= rSeg.curve * 0.004;
         r.offset = Math.max(-0.8, Math.min(0.8, r.offset));
         r.pos += r.curSpeed * POS_FACTOR;
@@ -1446,8 +1378,8 @@
       });
     }
 
+    // Solo collisioni con gli avversari (niente piu ostacoli)
     function handleCollisions() {
-      // Collisione con gli avversari
       rivals.forEach(function (r) {
         let rel = r.pos - position;
         if (rel > track.lengthUnits / 2)  rel -= track.lengthUnits;
@@ -1459,22 +1391,8 @@
           else playerX -= 0.15;
         }
       });
-
-      // Collisione con gli ostacoli
-      track.obstacles.forEach(function (ob) {
-        let rel = ob.pos - position;
-        if (rel > track.lengthUnits / 2)  rel -= track.lengthUnits;
-        if (rel < -track.lengthUnits / 2) rel += track.lengthUnits;
-        if (Math.abs(rel) < 30 && Math.abs(playerX - ob.offset) < 0.32) {
-          speed *= 0.4;
-          playSound(70, "sawtooth", 0.2);
-          if (playerX > ob.offset) playerX += 0.1;
-          else playerX -= 0.1;
-        }
-      });
     }
 
-    // Calcola il piazzamento del giocatore
     function updatePlayerPosition() {
       const myDist = playerTotalDist();
       let ahead = 0;
@@ -1510,7 +1428,6 @@
         state = "PRERACE";
         return;
       }
-      // Avanza alla gara successiva del campionato
       championshipIndex++;
       if (championshipIndex >= CHAMP_TOTAL) {
         state = "MENU";
@@ -1538,7 +1455,6 @@
       return ((track.lengthUnits * totalLaps) / unitsPerSec) * 1000;
     }
 
-    // Schiarisce/scurisce un colore hex di "amt"
     function shade(hex, amt) {
       const n = parseInt(hex.slice(1), 16);
       let r = (n >> 16) + amt;
@@ -1550,14 +1466,13 @@
       return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
     }
 
-    // Disegna un rettangolo pixel
     function px(x, y, w, h, color) {
       ctx.fillStyle = color;
       ctx.fillRect(x, y, w, h);
     }
 
     // ============================================================
-    //  DISEGNO PRINCIPALE (sceglie cosa disegnare in base allo stato)
+    //  DISEGNO PRINCIPALE
     // ============================================================
     function draw() {
       switch (state) {
@@ -1570,7 +1485,6 @@
         case "STANDINGS":      return drawStandings();
       }
 
-      // Stati di gioco (countdown / racing / pausa / traguardo)
       drawScene();
       if (state === "COUNTDOWN") drawCountdown();
       if (state === "PAUSE")     drawPause();
@@ -1582,26 +1496,22 @@
     //  SCHERMATA INIZIALE (splash 8-bit)
     // ============================================================
     function drawSplash() {
-      // Cielo a bande tramonto
       const bands = ["#241a4a", "#3a2a6a", "#6a3a7a", "#c0506a", "#f08050", "#ffb060"];
       for (let i = 0; i < bands.length; i++) {
         px(0, i * 15, 320, 15, bands[i]);
       }
 
-      // Sole
       px(130, 50, 60, 60, "#ffe070");
       px(124, 56, 72, 48, "#ffe070");
       px(136, 44, 48, 72, "#ffe070");
       px(150, 70, 20, 20, "#fff2b0");
 
-      // Skyline scuro
       for (let b = 0; b < 10; b++) {
         const bx = b * 34;
         const bh = 20 + ((b * 29) % 40);
         px(bx, 120 - bh, 30, bh, "#2a1c40");
       }
 
-      // Strada prospettica
       px(0, 150, 320, 170, "#3a3a44");
       for (let i = 0; i < 11; i++) {
         const w = 8 + i * 26;
@@ -1611,10 +1521,8 @@
         px(158, 150 + i * 18, 4, 12, "#ffd84a");
       }
 
-      // Auto grande in primo piano
       drawCarBig(160, 262, 3.0, "#1aa3f0");
 
-      // Titolo
       ctx.textAlign = "center";
       ctx.fillStyle = "#5a0000";
       ctx.font = "bold 32px monospace";
@@ -1627,7 +1535,6 @@
       ctx.fillStyle = "#ffd84a";
       ctx.fillText("RACING", 160, 58);
 
-      // "Premi START" lampeggiante
       if (Math.floor(splashTime / 450) % 2 === 0) {
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 13px monospace";
@@ -1640,7 +1547,6 @@
       ctx.textAlign = "left";
     }
 
-    // Auto grande per lo splash (vista da dietro)
     function drawCarBig(cx, cy, s, color) {
       px(cx - 30 * s, cy + 20 * s, 60 * s, 4 * s, "rgba(0,0,0,0.3)");
       px(cx - 30 * s, cy - 2 * s, 60 * s, 20 * s, color);
@@ -1667,7 +1573,6 @@
       const horizonY = 140;
       const roadHeight = 180;
 
-      // Cielo (gradiente)
       const grad = ctx.createLinearGradient(0, 0, 0, horizonY);
       grad.addColorStop(0, theme.sky[0]);
       grad.addColorStop(1, theme.sky[1]);
@@ -1684,7 +1589,6 @@
       drawHUD();
     }
 
-    // Sole / luna / stelle
     function drawCelestial(theme, horizonY) {
       if (theme.moon) {
         for (let i = 0; i < 40; i++) {
@@ -1709,7 +1613,6 @@
       }
     }
 
-    // Sfondo in base al tema
     function drawBackground(theme, horizonY, curveOffset) {
       switch (theme.scenery) {
         case "buildings":
@@ -1822,7 +1725,6 @@
       ctx.fill();
     }
 
-    // Disegna la strada linea per linea (effetto prospettiva)
     function drawRoad(theme, horizonY, roadHeight) {
       let dx = 0;
       const camX = playerX * 120;
@@ -1842,32 +1744,26 @@
         const rightGrass = centerX + roadWidth;
         const isAlt = Math.floor(lookAhead / 40) % 2 === 0;
 
-        // Terreno fuori pista
         ctx.fillStyle = isAlt ? theme.grass.light : theme.grass.dark;
         ctx.fillRect(0, y, 320, 1);
 
-        // Bordo scuro di transizione
         const edgeW = Math.max(2, roadWidth * 0.14);
         ctx.fillStyle = theme.edge;
         ctx.fillRect(leftGrass - edgeW, y, roadWidth * 2 + edgeW * 2, 1);
 
-        // Asfalto
         ctx.fillStyle = isAlt ? theme.road.light : theme.road.dark;
         ctx.fillRect(leftGrass, y, roadWidth * 2, 1);
 
-        // Cordoli
         ctx.fillStyle = isAlt ? theme.kerb.a : theme.kerb.b;
         const kerbW = Math.max(1.5, roadWidth * 0.1);
         ctx.fillRect(leftGrass - kerbW, y, kerbW, 1);
         ctx.fillRect(rightGrass, y, kerbW, 1);
 
-        // Linea centrale
         if (isAlt && roadWidth > 30) {
           ctx.fillStyle = "rgba(255,255,255,0.7)";
           ctx.fillRect(centerX - 1, y, 2, 1);
         }
 
-        // Cartelli laterali
         if (seg.hasSign && i % 35 === 0) {
           const signX = (seg.signSide === -1) ? leftGrass - 15 : rightGrass + 5;
           ctx.fillStyle = "#000";
@@ -1878,41 +1774,27 @@
       }
     }
 
-    // Disegna avversari e ostacoli ordinati per profondita
+    // Disegna gli avversari (nessun ostacolo)
     function drawWorldSprites(horizonY, roadHeight) {
       const sprites = [];
-
-      track.obstacles.forEach(function (ob) {
-        let rel = ob.pos - position;
-        if (rel < 0) rel += track.lengthUnits;
-        if (rel > 0 && rel < 800) {
-          sprites.push({ kind: "obstacle", rel: rel, data: ob });
-        }
-      });
 
       rivals.forEach(function (r) {
         let rel = r.pos - position;
         if (rel < 0) rel += track.lengthUnits;
         if (rel > 0 && rel < 800) {
-          sprites.push({ kind: "rival", rel: rel, data: r });
+          sprites.push({ rel: rel, data: r });
         }
       });
 
-      // Dal piu lontano al piu vicino
       sprites.sort(function (a, b) { return b.rel - a.rel; });
 
       sprites.forEach(function (sp) {
         const perspective = 1 - (sp.rel / 800);
         const y = horizonY + perspective * roadHeight;
-        if (sp.kind === "rival") {
-          drawRivalVehicle(sp.data, perspective, y);
-        } else {
-          drawObstacle(sp.data, perspective, y);
-        }
+        drawRivalVehicle(sp.data, perspective, y);
       });
     }
 
-    // Posizione X sullo schermo di uno sprite
     function spriteX(offset, perspective) {
       return 160 - (playerX - offset) * 120 * perspective;
     }
@@ -1927,7 +1809,6 @@
       }
     }
 
-    // Auto vista da dietro
     function drawCarSprite(cx, cy, u, color) {
       px(cx - 16 * u, cy - 2 * u, 32 * u, 12 * u, color);
       px(cx - 12 * u, cy - 12 * u, 24 * u, 10 * u, color);
@@ -1940,85 +1821,25 @@
       px(cx + 11 * u, cy + 9 * u, 6 * u, 5 * u, "#111");
     }
 
-    // Scooter visto da dietro con casco
     function drawScooterSprite(cx, cy, u, color) {
       const dark = shade(color, -35);
-      px(cx - 9 * u, cy + 13 * u, 18 * u, 3 * u, "rgba(0,0,0,0.3)"); // ombra
-      px(cx - 4 * u, cy + 4 * u, 8 * u, 11 * u, "#1a1a1a");          // ruota
-      px(cx - 2 * u, cy + 7 * u, 4 * u, 5 * u, "#666");             // mozzo
-      px(cx - 9 * u, cy - 2 * u, 18 * u, 8 * u, color);            // corpo
-      px(cx - 7 * u, cy + 4 * u, 14 * u, 4 * u, dark);             // ombra bassa
-      px(cx - 2 * u, cy - 1 * u, 4 * u, 3 * u, "#cc2020");         // fanalino
-      px(cx - 6 * u, cy - 8 * u, 12 * u, 5 * u, "#2a2a2a");        // sella
-      px(cx - 6 * u, cy - 18 * u, 12 * u, 11 * u, "#3a4a6a");      // schiena
-      px(cx - 8 * u, cy - 15 * u, 3 * u, 8 * u, "#33405c");        // braccio sx
-      px(cx + 5 * u, cy - 15 * u, 3 * u, 8 * u, "#33405c");        // braccio dx
-      px(cx - 5 * u, cy - 27 * u, 10 * u, 10 * u, "#e8e8ec");      // casco
-      px(cx - 5 * u, cy - 27 * u, 10 * u, 3 * u, "#ffffff");       // riflesso
-      px(cx - 5 * u, cy - 19 * u, 10 * u, 2 * u, "#333");          // bordo casco
-      px(cx - 9 * u, cy - 13 * u, 2 * u, 2 * u, "#222");           // specchietto sx
-      px(cx + 7 * u, cy - 13 * u, 2 * u, 2 * u, "#222");           // specchietto dx
+      px(cx - 9 * u, cy + 13 * u, 18 * u, 3 * u, "rgba(0,0,0,0.3)");
+      px(cx - 4 * u, cy + 4 * u, 8 * u, 11 * u, "#1a1a1a");
+      px(cx - 2 * u, cy + 7 * u, 4 * u, 5 * u, "#666");
+      px(cx - 9 * u, cy - 2 * u, 18 * u, 8 * u, color);
+      px(cx - 7 * u, cy + 4 * u, 14 * u, 4 * u, dark);
+      px(cx - 2 * u, cy - 1 * u, 4 * u, 3 * u, "#cc2020");
+      px(cx - 6 * u, cy - 8 * u, 12 * u, 5 * u, "#2a2a2a");
+      px(cx - 6 * u, cy - 18 * u, 12 * u, 11 * u, "#3a4a6a");
+      px(cx - 8 * u, cy - 15 * u, 3 * u, 8 * u, "#33405c");
+      px(cx + 5 * u, cy - 15 * u, 3 * u, 8 * u, "#33405c");
+      px(cx - 5 * u, cy - 27 * u, 10 * u, 10 * u, "#e8e8ec");
+      px(cx - 5 * u, cy - 27 * u, 10 * u, 3 * u, "#ffffff");
+      px(cx - 5 * u, cy - 19 * u, 10 * u, 2 * u, "#333");
+      px(cx - 9 * u, cy - 13 * u, 2 * u, 2 * u, "#222");
+      px(cx + 7 * u, cy - 13 * u, 2 * u, 2 * u, "#222");
     }
 
-    function drawObstacle(ob, perspective, y) {
-      const x = spriteX(ob.offset, perspective);
-      const s = (10 + perspective * 46) * ob.h;
-
-      // Ombra
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
-      ctx.beginPath();
-      ctx.ellipse(x, y, s * 0.45, s * 0.12, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.lineWidth = Math.max(1.5, s * 0.06);
-      ctx.strokeStyle = "#000";
-
-      switch (ob.type) {
-        case "cone":
-          ctx.fillStyle = "#ff7a00";
-          ctx.beginPath();
-          ctx.moveTo(x, y - s);
-          ctx.lineTo(x - s * 0.42, y);
-          ctx.lineTo(x + s * 0.42, y);
-          ctx.closePath();
-          ctx.fill(); ctx.stroke();
-          ctx.fillStyle = "#fff";
-          ctx.fillRect(x - s * 0.28, y - s * 0.55, s * 0.56, s * 0.16);
-          break;
-        case "palm":
-          ctx.fillStyle = "#7a4a1a";
-          ctx.fillRect(x - s * 0.09, y - s, s * 0.18, s);
-          ctx.strokeRect(x - s * 0.09, y - s, s * 0.18, s);
-          ctx.fillStyle = "#18b020";
-          ctx.beginPath();
-          ctx.arc(x, y - s, s * 0.55, 0, Math.PI * 2);
-          ctx.fill(); ctx.stroke();
-          break;
-        case "tree":
-          ctx.fillStyle = "#6a4020";
-          ctx.fillRect(x - s * 0.11, y - s * 0.5, s * 0.22, s * 0.5);
-          ctx.strokeRect(x - s * 0.11, y - s * 0.5, s * 0.22, s * 0.5);
-          ctx.fillStyle = "#12a02a";
-          ctx.beginPath();
-          ctx.moveTo(x, y - s * 1.05);
-          ctx.lineTo(x - s * 0.5, y - s * 0.3);
-          ctx.lineTo(x + s * 0.5, y - s * 0.3);
-          ctx.closePath();
-          ctx.fill(); ctx.stroke();
-          break;
-        case "cactus":
-          ctx.fillStyle = "#38b048";
-          ctx.beginPath();
-          ctx.rect(x - s * 0.12, y - s, s * 0.24, s);
-          ctx.rect(x - s * 0.4, y - s * 0.6, s * 0.28, s * 0.14);
-          ctx.rect(x + s * 0.12, y - s * 0.78, s * 0.28, s * 0.14);
-          ctx.fill(); ctx.stroke();
-          break;
-      }
-      ctx.lineWidth = 1;
-    }
-
-    // Veicolo del giocatore in primo piano
     function drawPlayerVehicle() {
       const cx = 160;
       if (vehicleType === "scooter") {
@@ -2030,7 +1851,6 @@
       }
     }
 
-    // Fascio dei fari (di notte)
     function drawHeadlights(cx, y) {
       ctx.fillStyle = "rgba(255,255,180,0.15)";
       ctx.beginPath();
@@ -2041,7 +1861,6 @@
       ctx.fill();
     }
 
-    // Barra in alto con velocita, giro e posizione
     function drawHUD() {
       ctx.fillStyle = "#101010";
       ctx.fillRect(0, 0, 320, 22);
@@ -2057,7 +1876,6 @@
       ctx.fillText("POS " + playerPos + "/" + NUM_RACERS, 235, 15);
     }
 
-    // Riquadro info gara (tasto SELECT)
     function drawInfoOverlay() {
       ctx.fillStyle = "rgba(0,0,0,0.78)";
       ctx.fillRect(30, 40, 260, 160);
@@ -2085,7 +1903,6 @@
       ctx.fillText(t("lap") + " " + lap + "/" + totalLaps + " (" + lapProgress + "%)", 45, 178);
     }
 
-    // Conto alla rovescia 3-2-1 (senza nome pista)
     function drawCountdown() {
       ctx.fillStyle = "rgba(0,0,0,0.4)";
       ctx.fillRect(0, 0, 320, 320);
@@ -2097,7 +1914,6 @@
       ctx.textAlign = "left";
     }
 
-    // Menu di pausa
     function drawPause() {
       ctx.fillStyle = "rgba(0,0,0,0.8)";
       ctx.fillRect(0, 0, 320, 320);
@@ -2132,7 +1948,6 @@
       ctx.textAlign = "left";
     }
 
-    // Schermata traguardo
     function drawFinish() {
       ctx.fillStyle = "rgba(0,0,0,0.85)";
       ctx.fillRect(0, 0, 320, 320);
@@ -2157,7 +1972,6 @@
       ctx.textAlign = "left";
     }
 
-    // Classifica del campionato
     function drawStandings() {
       ctx.fillStyle = "#0c1020";
       ctx.fillRect(0, 0, 320, 320);
@@ -2192,7 +2006,6 @@
       ctx.textAlign = "left";
     }
 
-    // Schermata pre-gara del campionato
     function drawPrerace() {
       ctx.fillStyle = "#101828";
       ctx.fillRect(0, 0, 320, 320);
@@ -2240,7 +2053,6 @@
       ctx.textAlign = "left";
     }
 
-    // Schermata scelta veicolo
     function drawVehicleSelect() {
       ctx.fillStyle = "#101828";
       ctx.fillRect(0, 0, 320, 320);
@@ -2283,7 +2095,6 @@
       ctx.textAlign = "left";
     }
 
-    // Schermata scelta colore
     function drawColorSelect() {
       ctx.fillStyle = "#101828";
       ctx.fillRect(0, 0, 320, 320);
@@ -2323,7 +2134,6 @@
       ctx.textAlign = "left";
     }
 
-    // Menu principale
     function drawMenu() {
       ctx.fillStyle = "#101828";
       ctx.fillRect(0, 0, 320, 320);
@@ -2361,7 +2171,6 @@
       ctx.textAlign = "left";
     }
 
-    // Schermata scelta pista (corsa singola)
     function drawTrackSelect() {
       ctx.fillStyle = "#101828";
       ctx.fillRect(0, 0, 320, 320);
@@ -2398,7 +2207,7 @@
     function gameLoop(now) {
       let dt = now - lastTime;
       lastTime = now;
-      if (dt > 100) dt = 100; // evita salti se la scheda va in background
+      if (dt > 100) dt = 100;
 
       try {
         update(dt);
