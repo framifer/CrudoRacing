@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Crudo Racing</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    :root { --gb-body: #c4cfa1; }
+    body {
+      background-color: #111; margin: 0; padding: 0;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; font-family: 'Courier New', monospace;
+    }
+    #phone-screen {
+      width: 100vw; max-width: 420px; height: 100vh; max-height: 900px;
+      background-color: var(--gb-body); display: flex; flex-direction: column;
+      border: 2px solid #2a2a2a;
+      border-radius: 26px 26px 44px 44px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.9), inset 0 0 8px rgba(255,255,255,0.15);
+      overflow: hidden;
+    }
+    #screen-container {
+      flex: 0 0 46%;
+      background-color: #222;
+      display: flex; justify-content: center; align-items: center;
+      padding: 12px;
+    }
+    #game-wrapper {
+      position: relative; width: 320px; height: 320px; max-width: 100%; aspect-ratio: 1/1;
+      margin: 0 auto;
+      border: 4px solid #111;
+      border-radius: 8px;
+      background-color: #000;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.7);
+    }
+    canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; border-radius: 4px; }
+    #controller {
+      flex: 1;
+      background-color: var(--gb-body);
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+      padding: 30px 22px 40px;
+      border-top: 4px solid #555;
+    }
+    .controls-top { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 6px; }
+    .dpad { position: relative; width: 150px; height: 150px; filter: drop-shadow(3px 6px 5px rgba(0,0,0,0.4)); }
+    .dpad-btn {
+      position: absolute; background: linear-gradient(145deg, #3a3a3a, #111);
+      border: none; cursor: pointer;
+      box-shadow: inset 1px 1px 2px rgba(255,255,255,0.2), inset -1px -1px 3px rgba(0,0,0,0.8);
+      transition: transform 0.05s ease, box-shadow 0.05s ease; touch-action: none;
+    }
+    .dpad-up { top: 0; left: 51px; width: 48px; height: 55px; border-radius: 10px 10px 0 0; }
+    .dpad-down { bottom: 0; left: 51px; width: 48px; height: 55px; border-radius: 0 0 10px 10px; }
+    .dpad-left { top: 51px; left: 0; width: 55px; height: 48px; border-radius: 10px 0 0 10px; }
+    .dpad-right { top: 51px; right: 0; width: 55px; height: 48px; border-radius: 0 10px 10px 0; }
+    .dpad-btn:active, .dpad-btn.active {
+      background: #111; transform: translate(1px, 2px);
+      box-shadow: inset 2px 2px 6px rgba(0,0,0,0.9);
+    }
+    .action-buttons { display: flex; gap: 22px; transform: rotate(-15deg); filter: drop-shadow(3px 6px 5px rgba(0,0,0,0.3)); }
+    .btn-round-container { text-align: center; }
+    .btn-round {
+      width: 68px; height: 68px;
+      background: linear-gradient(145deg, #a72352, #6e1333);
+      border-radius: 50%; border: none; color: white; font-weight: bold;
+      font-size: 22px; cursor: pointer;
+      box-shadow: inset 1px 2px 3px rgba(255,255,255,0.3), inset -2px -2px 5px rgba(0,0,0,0.6);
+      transition: transform 0.05s ease; touch-action: none;
+    }
+    .btn-round:active, .btn-round.active {
+      transform: translate(2px, 3px);
+      box-shadow: inset 2px 2px 7px rgba(0,0,0,0.8); background: #5b0f2a;
+    }
+    .controls-bottom { display: flex; justify-content: center; gap: 45px; margin-top: 26px; }
+    .btn-pill-container { text-align: center; transform: rotate(-25deg); filter: drop-shadow(2px 4px 3px rgba(0,0,0,0.3)); }
+    .btn-pill {
+      width: 80px; height: 20px;
+      background: linear-gradient(145deg, #6e6e6e, #333);
+      border-radius: 10px; border: none; cursor: pointer;
+      box-shadow: inset 1px 1px 2px rgba(255,255,255,0.2), inset -1px -1px 3px rgba(0,0,0,0.7);
+      touch-action: none;
+    }
+    .btn-pill:active, .btn-pill.active {
+      transform: translate(1px, 2px); background: #222;
+      box-shadow: inset 1px 1px 4px rgba(0,0,0,0.9);
+    }
+    .btn-pill-label { font-size: 12px; color: #306230; text-align: center; margin-top: 6px; font-weight: bold; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+
+  <div id="phone-screen">
+    <div id="screen-container">
+      <div id="game-wrapper">
+        <canvas id="gameCanvas" width="320" height="320"></canvas>
+      </div>
+    </div>
+    <div id="controller">
+      <div class="controls-top">
+        <div class="dpad">
+          <button class="dpad-btn dpad-up" id="btn-up"></button>
+          <button class="dpad-btn dpad-down" id="btn-down"></button>
+          <button class="dpad-btn dpad-left" id="btn-left"></button>
+          <button class="dpad-btn dpad-right" id="btn-right"></button>
+        </div>
+        <div class="action-buttons">
+          <div class="btn-round-container"><button class="btn-round" id="btn-b">B</button></div>
+          <div class="btn-round-container"><button class="btn-round" id="btn-a">A</button></div>
+        </div>
+      </div>
+      <div class="controls-bottom">
+        <div class="btn-pill-container">
+          <button class="btn-pill" id="btn-select"></button>
+          <div class="btn-pill-label">SELECT</div>
+        </div>
+        <div class="btn-pill-container">
+          <button class="btn-pill" id="btn-start"></button>
+          <div class="btn-pill-label">START</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const NUM_RIVALS = 14;
+    const NUM_RACERS = NUM_RIVALS + 1;
+    const SAVE_KEY = 'cityRacingChampionship_v1';
+    const LANG_KEY = 'cityRacingLang';
+    const RACE_TARGET_MIN = 1;   // ogni gara ~1 minuto
+
+    const ROAD_WIDTH_BASE = 26;
+    const ROAD_WIDTH_PERSP = 240;
+
+    let lang = 'it';
+    try { lang = localStorage.getItem(LANG_KEY) || 'it'; } catch(e) {}
+    const I18N = {
+      it:{
+        title:'CRUDO RACING', pressStart:'Premi START', chooseVehicle:'SCEGLI IL VEICOLO', cars:'MACCHINE', scooters:'MOTORINI',
+        chooseColor:'SCEGLI IL COLORE', championship:'CAMPIONATO', singleRace:'CORSA SINGOLA',
+        randomTrack:'PISTA CASUALE', loadChampionship:'CARICA SALVATAGGIO', chooseTrack:'SCEGLI LA PISTA',
+        startRace:'INIZIA GARA', viewStandings:'VEDI CLASSIFICA', saveChampionship:'SALVA PROGRESSI',
+        exitToMenu:'ESCI AL MENU', saveAndExit:'SALVA ED ESCI', pause:'PAUSA', resume:'RIPRENDI', standings:'CLASSIFICA',
+        finalStandings:'CLASSIFICA FINALE', finish:'TRAGUARDO!', position:'Posizione', time:'Tempo',
+        raceInfo:'INFO GARA', track:'Pista', raceDuration:'Durata gara', estDuration:'Durata stimata',
+        timeLeft:'Tempo restante', lap:'Giro', raceOf:'Gara', of:'di', raceStarting:'La gara sta per iniziare!',
+        savedOk:'Salvataggio effettuato!', navChoose:'Frecce = scegli   A = conferma',
+        navChooseConfirm:'Frecce = scegli   A/START = conferma', navColorHint:'Frecce = scegli  A = ok  B = indietro',
+        navBack:'B/SELECT = indietro', controlsHint:'A=gas  B=freno  START=pausa  SELECT=info',
+        changeVehicle:'B = cambia veicolo/colore', continueA:'A per continuare',
+        aForStandings:'A per la classifica', aForMenu:'A per tornare al menu', langLabel:'LINGUA',
+        toggleLangHint:'SELECT = English', go:'VIA'
+      },
+      en:{
+        title:'CRUDO RACING', pressStart:'Press START', chooseVehicle:'CHOOSE VEHICLE', cars:'CARS', scooters:'SCOOTERS',
+        chooseColor:'CHOOSE COLOR', championship:'CHAMPIONSHIP', singleRace:'SINGLE RACE',
+        randomTrack:'RANDOM TRACK', loadChampionship:'LOAD SAVE', chooseTrack:'CHOOSE TRACK',
+        startRace:'START RACE', viewStandings:'VIEW STANDINGS', saveChampionship:'SAVE PROGRESS',
+        exitToMenu:'EXIT TO MENU', saveAndExit:'SAVE & EXIT', pause:'PAUSE', resume:'RESUME', standings:'STANDINGS',
+        finalStandings:'FINAL STANDINGS', finish:'FINISH!', position:'Position', time:'Time',
+        raceInfo:'RACE INFO', track:'Track', raceDuration:'Race time', estDuration:'Est. duration',
+        timeLeft:'Time left', lap:'Lap', raceOf:'Race', of:'of', raceStarting:'The race is about to start!',
+        savedOk:'Game saved!', navChoose:'Arrows = move   A = confirm',
+        navChooseConfirm:'Arrows = move   A/START = confirm', navColorHint:'Arrows = move  A = ok  B = back',
+        navBack:'B/SELECT = back', controlsHint:'A=gas  B=brake  START=pause  SELECT=info',
+        changeVehicle:'B = change vehicle/color', continueA:'Press A to continue',
+        aForStandings:'A for standings', aForMenu:'A to return to menu', langLabel:'LANGUAGE',
+        toggleLangHint:'SELECT = Italiano', go:'GO'
+      }
+    };
+    function t(k){ return (I18N[lang] && I18N[lang][k]) || I18N.it[k] || k; }
+    function toggleLang(){ lang = (lang==='it') ? 'en' : 'it'; try{ localStorage.setItem(LANG_KEY,lang); }catch(e){} }
+
+    const THEME_NAMES = {
+      normal:{it:'NORMALE',en:'NORMAL'}, city:{it:'CITTA',en:'CITY'}, islands:{it:'ISOLE',en:'ISLANDS'},
+      mountain:{it:'MONTAGNA',en:'MOUNTAIN'}, desert:{it:'DESERTO',en:'DESERT'},
+      normalNight:{it:'NOTTURNA',en:'NIGHT'}, cityNight:{it:'CITTA SERA',en:'CITY NIGHT'},
+      islandsSunset:{it:'ISOLE TRAMONTO',en:'ISLANDS SUNSET'}, mountainSunset:{it:'MONT. TRAMONTO',en:'MOUNT. SUNSET'},
+      desertNight:{it:'DESERTO NOTTE',en:'DESERT NIGHT'}
+    };
+    function themeName(key){ return THEME_NAMES[key][lang] || THEME_NAMES[key].it; }
+
+    const THEMES = {
+      normal:{sky:['#5c94fc','#8fc0ff'],night:false,hills:{dark:'#187800',light:'#24a000'},grass:{light:'#00b800',dark:'#007000'},road:{light:'#6e6e6e',dark:'#565656'},kerb:{a:'#e40058',b:'#ffffff'},edge:'#0a3a0a',scenery:'hills'},
+      city:{sky:['#7ea4d8','#b9d0ec'],night:false,hills:{dark:'#5a5a6e',light:'#727287'},grass:{light:'#9a9a9a',dark:'#6a6a6a'},road:{light:'#787878',dark:'#5e5e5e'},kerb:{a:'#e40058',b:'#ffffff'},edge:'#2a2a30',scenery:'buildings'},
+      islands:{sky:['#3ea0e0','#9fe0ff'],night:false,hills:{dark:'#1f7fb0',light:'#2ea0d0'},grass:{light:'#e8d59a',dark:'#c8a860'},road:{light:'#787880',dark:'#606068'},kerb:{a:'#e40058',b:'#ffffff'},edge:'#7a5f30',scenery:'sea'},
+      mountain:{sky:['#a8c8e8','#dceaf7'],night:false,hills:{dark:'#c8d4e0',light:'#eaf2fa'},grass:{light:'#f2f6fb',dark:'#c8d2de'},road:{light:'#808088',dark:'#666670'},kerb:{a:'#c40040',b:'#ffffff'},edge:'#9aa4b0',scenery:'snow'},
+      desert:{sky:['#f0c46a','#ffe3a0'],night:false,hills:{dark:'#c89850',light:'#e0b060'},grass:{light:'#e8c878',dark:'#c49848'},road:{light:'#948360',dark:'#74654a'},kerb:{a:'#c40040',b:'#ffffff'},edge:'#8a6a34',scenery:'dunes'},
+      normalNight:{sky:['#0a1030','#1a2450'],night:true,hills:{dark:'#0c2a0c',light:'#123812'},grass:{light:'#0a3a0a',dark:'#052405'},road:{light:'#525260',dark:'#3c3c48'},kerb:{a:'#e40058',b:'#e8e8e8'},edge:'#031803',scenery:'hills'},
+      cityNight:{sky:['#141830','#2a2450'],night:true,hills:{dark:'#26263a',light:'#34344e'},grass:{light:'#3a3a44',dark:'#242430'},road:{light:'#565664',dark:'#40404c'},kerb:{a:'#e40058',b:'#e8e8e8'},edge:'#16161e',scenery:'buildingsLit'},
+      islandsSunset:{sky:['#ff8a4a','#ffd08a'],night:false,sunset:true,hills:{dark:'#a85a70',light:'#d07a80'},grass:{light:'#d8a878',dark:'#b8844c'},road:{light:'#78686e',dark:'#5c4c54'},kerb:{a:'#e40058',b:'#ffe0c0'},edge:'#6a4a2a',scenery:'seaSunset'},
+      mountainSunset:{sky:['#ff9a5a','#ffcf9a'],night:false,sunset:true,hills:{dark:'#e0c0d0',light:'#ffe0e8'},grass:{light:'#f0d8e0',dark:'#d4b4c4'},road:{light:'#807078',dark:'#645460'},kerb:{a:'#c40040',b:'#ffe8d0'},edge:'#9a7a8a',scenery:'snow'},
+      desertNight:{sky:['#0a1028','#1c2448'],night:true,moon:true,hills:{dark:'#40381f',light:'#544a28'},grass:{light:'#4a4028',dark:'#322a18'},road:{light:'#54503f',dark:'#403c30'},kerb:{a:'#c40040',b:'#e8e8e8'},edge:'#241e10',scenery:'dunesNight'}
+    };
+    const BASE_TRACKS=['normal','city','islands','mountain','desert','normalNight','cityNight','islandsSunset','mountainSunset','desertNight'];
+    const CHAMPIONSHIP_ORDER = BASE_TRACKS.concat(BASE_TRACKS);
+    const CHAMP_TOTAL = CHAMPIONSHIP_ORDER.length;
+    const PLAYER_COLORS=[{it:'ROSSO',en:'RED',v:'#dc0000'},{it:'BLU',en:'BLUE',v:'#1560dc'},{it:'VERDE',en:'GREEN',v:'#18a018'},{it:'GIALLO',en:'YELLOW',v:'#f0c000'},{it:'BIANCO',en:'WHITE',v:'#eeeeee'},{it:'NERO',en:'BLACK',v:'#2a2a2a'},{it:'ARANCIONE',en:'ORANGE',v:'#f07000'},{it:'VIOLA',en:'PURPLE',v:'#8020c0'}];
+    function colorName(i){ return PLAYER_COLORS[i][lang] || PLAYER_COLORS[i].it; }
+    const POINTS_TABLE=[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1];
+    const RIVAL_NAMES=['ROSSI','BIANCHI','VERDI','FERRARI','CONTI','RICCI','MORO','GALLO','BRUNO','FONTANA','MARINO','GRECO','LOMBARDI','BARBIERI'];
+    const RIVAL_COLORS=['#0044cc','#fc9838','#f8d820','#00a844','#cc00cc','#00cccc','#ff5555','#8844ff','#44ddaa','#dd7722','#66aa22','#aa2266','#2288dd','#dddddd'];
+
+    const AudioCtxClass=window.AudioContext||window.webkitAudioContext;
+    let audioCtx=null,engineOsc=null,engineGain=null;
+    function initAudio(){ if(!audioCtx){ audioCtx=new AudioCtxClass(); engineOsc=audioCtx.createOscillator(); engineGain=audioCtx.createGain(); engineOsc.type='sawtooth'; engineOsc.frequency.setValueAtTime(60,audioCtx.currentTime); engineGain.gain.setValueAtTime(0.01,audioCtx.currentTime); engineOsc.connect(engineGain); engineGain.connect(audioCtx.destination); engineOsc.start(); } if(audioCtx.state==='suspended') audioCtx.resume(); }
+    function updateEngineSound(r){ if(engineOsc&&engineGain){ const base=(vehicleType==='scooter')?90:50; const range=(vehicleType==='scooter')?260:180; engineOsc.frequency.setTargetAtTime(base+r*range,audioCtx.currentTime,0.05); engineGain.gain.setTargetAtTime((state==='RACING'&&r>0.05)?0.04:0.0,audioCtx.currentTime,0.05); } }
+    function playSound(freq=440,type='square',dur=0.08){ initAudio(); const osc=audioCtx.createOscillator(),gain=audioCtx.createGain(); osc.type=type; osc.frequency.setValueAtTime(freq,audioCtx.currentTime); gain.gain.setValueAtTime(0.1,audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+dur); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime+dur); }
+
+    const VEHICLE={ car:{maxSpeed:210,accel:1.6,decel:1.1,braking:3.2,steer:0.045}, scooter:{maxSpeed:170,accel:2.0,decel:1.3,braking:3.6,steer:0.06} };
+    let phys=VEHICLE.car;
+    const segmentLength=100, POS_FACTOR=0.4;
+
+    let state='SPLASH';
+    let menuIndex=0, vehicleType='car', playerColorIndex=0, playerColor=PLAYER_COLORS[0].v;
+    let raceMode='single', championshipIndex=0, championshipStandings=[];
+    let track=null, totalLaps=2;
+    let playerX=0, position=0, speed=0, lap=1, raceTimeMs=0;
+    let rivals=[], playerPos=NUM_RACERS, countdownMs=0, showInfoOverlay=false;
+    let pauseIndex=0, preraceIndex=0, hasSavedGame=false, standingsReturn='PRERACE', saveFlashMs=0;
+    let splashTime=0;
+    const drive={up:false,down:false,left:false,right:false};
+    const keyHeld={a:false,b:false};
+
+    let rngState=123456789;
+    function seedRng(s){ rngState=s>>>0||1; }
+    function rng(){ rngState^=rngState<<13; rngState>>>=0; rngState^=rngState>>17; rngState^=rngState<<5; rngState>>>=0; return rngState/4294967296; }
+    function rngRange(a,b){ return a+rng()*(b-a); }
+    function rngInt(a,b){ return Math.floor(rngRange(a,b+1)); }
+
+    function segAt(pos){ const n=track.totalSegments; let idx=Math.floor(pos/segmentLength)%n; if(idx<0) idx+=n; return track.segments[idx] || track.segments[0]; }
+
+    function buildTrack(themeKey,difficulty,seed){
+      seedRng(seed); const theme=THEMES[themeKey];
+      const avgSpeed=phys.maxSpeed*(0.55-difficulty*0.1);
+      const unitsPerSec=avgSpeed*POS_FACTOR*60;
+      const totalUnitsNeeded=unitsPerSec*RACE_TARGET_MIN*60;
+      totalLaps=rngInt(2,3);
+      let totalSegments=Math.max(80,Math.round((totalUnitsNeeded/totalLaps)/segmentLength));
+      const segments=[]; let i=0; const startStraight=20;
+      while(i<totalSegments){
+        if(i<startStraight){ segments.push(makeSeg(0,0,i)); i++; continue; }
+        const roll=rng(); const remaining=totalSegments-i;
+        if(roll<0.25){ const len=Math.min(remaining,rngInt(15,35)); const hill=maybeHill(difficulty); for(let s=0;s<len&&i<totalSegments;s++,i++){ const e=Math.sin((s/len)*Math.PI); segments.push(makeSeg(0,hill*e,i)); } }
+        else if(roll<0.5){ const len=Math.min(remaining,rngInt(20,40)); const dir=rng()<0.5?-1:1; const it=dir*(rngRange(1.2,2.2)+difficulty*2.2); const hill=maybeHill(difficulty); for(let s=0;s<len&&i<totalSegments;s++,i++){ const e=Math.sin((s/len)*Math.PI); segments.push(makeSeg(it*e,hill*e,i)); } }
+        else if(roll<0.75){ const half=Math.min(Math.floor(remaining/2),rngInt(16,28)); const dir=rng()<0.5?-1:1; const it=(rngRange(1.5,2.4)+difficulty*2.2); for(let s=0;s<half&&i<totalSegments;s++,i++){ const e=Math.sin((s/half)*Math.PI); segments.push(makeSeg(dir*it*e,0,i)); } for(let s=0;s<half&&i<totalSegments;s++,i++){ const e=Math.sin((s/half)*Math.PI); segments.push(makeSeg(-dir*it*e,0,i)); } }
+        else { const len=Math.min(remaining,rngInt(30,50)); const dir=rng()<0.5?-1:1; const it=dir*(rngRange(3.5,4.5)+difficulty*2.0); const hill=maybeHill(difficulty)*0.5; for(let s=0;s<len&&i<totalSegments;s++,i++){ const e=Math.min(1,Math.sin((s/len)*Math.PI)*1.6); segments.push(makeSeg(it*e,hill*e,i)); } }
+      }
+      totalSegments=segments.length; const lengthUnits=totalSegments*segmentLength;
+      const obstacles=[]; const obstacleCount=Math.round(totalSegments/rngRange(9,14));
+      for(let o=0;o<obstacleCount;o++){
+        const segIdx=rngInt(startStraight+5,totalSegments-1);
+        const side=rng()<0.5?-1:1;
+        const off = (rng()<0.9) ? side*rngRange(0.95,1.3) : side*rngRange(0.7,0.85);
+        obstacles.push({pos:segIdx*segmentLength,offset:off,type:pickObstacleType(theme),h:rngRange(0.9,1.4)});
+      }
+      return {themeKey,theme,segments,totalSegments,lengthUnits,difficulty,obstacles};
+    }
+    function maybeHill(d){ return (rng()<(0.3+d*0.25))?rngRange(0.5,1.1)*(0.6+d):0; }
+    function pickObstacleType(t){ switch(t.scenery){ case 'buildings': case 'buildingsLit': return 'cone'; case 'sea': case 'seaSunset': return 'palm'; case 'snow': return 'tree'; case 'dunes': case 'dunesNight': return 'cactus'; default: return rng()<0.5?'tree':'cone'; } }
+    function makeSeg(curve,hill,i){ return {curve,hill,hasSign:(i%15===0),signSide:(i%30===0)?-1:1}; }
+
+    function startRace(themeKey,difficulty,seed){
+      track=buildTrack(themeKey,difficulty,seed);
+      playerX=0; position=0; speed=0; lap=1; raceTimeMs=0; showInfoOverlay=false;
+      drive.up=drive.down=drive.left=drive.right=false; keyHeld.a=false; keyHeld.b=false;
+      rivals=[];
+      for(let k=0;k<NUM_RIVALS;k++){
+        let p=(track.lengthUnits/NUM_RIVALS)*k+rngRange(-30,30);
+        if(p<0) p+=track.lengthUnits; p=p%track.lengthUnits;
+        rivals.push({idx:k,name:RIVAL_NAMES[k],color:RIVAL_COLORS[k%RIVAL_COLORS.length],pos:p,lap:1,totalDist:0,offset:rngRange(-0.6,0.6),baseSpeed:phys.maxSpeed*(0.82+difficulty*0.12)+rngRange(-8,12),curSpeed:0});
+      }
+      countdownMs=3200; state='COUNTDOWN';
+    }
+
+    function pressAction(action){
+      switch(state){
+        case 'SPLASH': if(action==='start'||action==='a'){ playSound(660,'square',0.1); state='VEHICLE_SELECT'; menuIndex=0; } break;
+        case 'VEHICLE_SELECT': navVehicle(action); break;
+        case 'COLOR_SELECT': navColor(action); break;
+        case 'MENU': navMainMenu(action); break;
+        case 'TRACK_SELECT': navTrackMenu(action); break;
+        case 'PRERACE': navPrerace(action); break;
+        case 'RACING': if(action==='start') openPause(); if(action==='select'){ showInfoOverlay=!showInfoOverlay; playSound(500,'square',0.05); } break;
+        case 'PAUSE': navPause(action); break;
+        case 'FINISH': if(action==='a'||action==='start') afterFinish(); break;
+        case 'STANDINGS': if(action==='a'||action==='start') afterStandings(); break;
+      }
+    }
+    function keyToInput(key,isDown){
+      switch(key){
+        case 'ArrowUp': case 'w': case 'W': drive.up=isDown; if(isDown) pressAction('up'); return;
+        case 'ArrowDown': case 's': case 'S': drive.down=isDown; if(isDown) pressAction('down'); return;
+        case 'ArrowLeft': drive.left=isDown; if(isDown) pressAction('left'); return;
+        case 'ArrowRight': drive.right=isDown; if(isDown) pressAction('right'); return;
+        case 'a': case 'A': keyHeld.a=isDown; if(isDown) pressAction('a'); return;
+        case 'b': case 'B': keyHeld.b=isDown; if(isDown) pressAction('b'); return;
+        case 'Enter': if(isDown) pressAction('start'); return;
+        case 'Shift': if(isDown) pressAction('select'); return;
+      }
+    }
+    function isAccel(){ return keyHeld.a||drive.up; }
+    function isBrake(){ return keyHeld.b||drive.down; }
+
+    window.addEventListener('keydown',e=>{ initAudio(); keyToInput(e.key,true); });
+    window.addEventListener('keyup',e=>{ keyToInput(e.key,false); });
+
+    function maybeLangToggle(action){ if(action==='select' && state!=='RACING' && state!=='SPLASH'){ toggleLang(); playSound(700,'square',0.06); return true; } return false; }
+
+    function navVehicle(a){ if(maybeLangToggle(a)) return; if(a==='up'||a==='down'){ menuIndex=menuIndex===0?1:0; playSound(400,'square',0.04); } else if(a==='a'){ vehicleType=menuIndex===0?'car':'scooter'; phys=VEHICLE[vehicleType]; playSound(650,'square',0.08); state='COLOR_SELECT'; menuIndex=0; } }
+    function navColor(a){ if(maybeLangToggle(a)) return; if(a==='left'||a==='up'){ menuIndex--; playSound(400,'square',0.04); } else if(a==='right'||a==='down'){ menuIndex++; playSound(400,'square',0.04); } else if(a==='a'){ playerColorIndex=menuIndex; playerColor=PLAYER_COLORS[menuIndex].v; playSound(650,'square',0.08); state='MENU'; menuIndex=0; } else if(a==='b'){ state='VEHICLE_SELECT'; menuIndex=(vehicleType==='car'?0:1); } clampIndex(PLAYER_COLORS.length); }
+    function navMainMenu(a){ if(maybeLangToggle(a)) return; const len=menuMainItems().length; if(a==='up'){ menuIndex--; playSound(400,'square',0.04); } else if(a==='down'){ menuIndex++; playSound(400,'square',0.04); } else if(a==='a'){ selectMainMenu(); } else if(a==='b'){ state='COLOR_SELECT'; menuIndex=0; } clampIndex(len); }
+    function menuMainItems(){ const items=['championship','singleRace','randomTrack']; if(hasSavedGame) items.push('loadChampionship'); return items; }
+    function selectMainMenu(){ playSound(650,'square',0.08); const items=menuMainItems(); const choice=items[menuIndex]; if(choice==='championship'){ raceMode='championship'; championshipIndex=0; initChampionshipStandings(); state='PRERACE'; preraceIndex=0; } else if(choice==='singleRace'){ raceMode='single'; state='TRACK_SELECT'; menuIndex=0; } else if(choice==='randomTrack'){ raceMode='random'; const keysArr=Object.keys(THEMES); startRace(keysArr[rngInt(0,keysArr.length-1)]||'normal',rngRange(0.3,0.7),Date.now()); } else if(choice==='loadChampionship'){ if(loadChampionship()){ raceMode='championship'; state='PRERACE'; preraceIndex=0; } } }
+    function navTrackMenu(a){ if(maybeLangToggle(a)) return; if(a==='up'){ menuIndex--; playSound(400,'square',0.04); } else if(a==='down'){ menuIndex++; playSound(400,'square',0.04); } else if(a==='a'){ playSound(650,'square',0.08); startRace(BASE_TRACKS[menuIndex],0.45,Date.now()); } else if(a==='b'){ state='MENU'; menuIndex=1; } clampIndex(BASE_TRACKS.length); }
+    function preraceItems(){ return ['startRace','viewStandings','saveChampionship','exitToMenu']; }
+    function navPrerace(a){ if(maybeLangToggle(a)) return; const items=preraceItems(); if(a==='up'){ preraceIndex--; playSound(400,'square',0.04); } else if(a==='down'){ preraceIndex++; playSound(400,'square',0.04); } else if(a==='a'){ const choice=items[(preraceIndex+items.length)%items.length]; if(choice==='startRace'){ playSound(650,'square',0.08); startRace(CHAMPIONSHIP_ORDER[championshipIndex],difficultyForChampionship(championshipIndex),Date.now()); } else if(choice==='viewStandings'){ playSound(500,'square',0.06); state='STANDINGS'; standingsReturn='PRERACE'; } else if(choice==='saveChampionship'){ saveChampionship(); playSound(880,'triangle',0.15); saveFlashMs=1500; } else if(choice==='exitToMenu'){ playSound(250,'square',0.12); state='MENU'; menuIndex=0; raceMode='single'; } } if(preraceIndex<0) preraceIndex=items.length-1; if(preraceIndex>=items.length) preraceIndex=0; }
+    function openPause(){ state='PAUSE'; pauseIndex=0; playSound(300,'square',0.1); }
+    function pauseItems(){ return (raceMode==='championship') ? ['resume','saveAndExit','exitToMenu'] : ['resume','exitToMenu']; }
+    function navPause(a){ const items=pauseItems(); if(a==='up'){ pauseIndex--; playSound(400,'square',0.04); } else if(a==='down'){ pauseIndex++; playSound(400,'square',0.04); } else if(a==='a'||a==='start'){ const choice=items[(pauseIndex+items.length)%items.length]; if(choice==='resume'){ state='RACING'; playSound(500,'square',0.1); } else if(choice==='saveAndExit'){ saveChampionship(); playSound(880,'triangle',0.15); updateEngineSound(0); saveFlashMs=1500; state='PRERACE'; preraceIndex=0; } else if(choice==='exitToMenu'){ exitToMenu(); } } if(pauseIndex<0) pauseIndex=items.length-1; if(pauseIndex>=items.length) pauseIndex=0; }
+    function exitToMenu(){ playSound(250,'square',0.15); updateEngineSound(0); state='MENU'; menuIndex=0; raceMode='single'; }
+    function clampIndex(len){ if(menuIndex<0) menuIndex=len-1; if(menuIndex>=len) menuIndex=0; }
+    function difficultyForChampionship(idx){ return Math.min(1, 0.15 + idx*0.045); }
+
+    function bindButton(id,opts){ const btn=document.getElementById(id); if(!btn) return; const driveKey=opts.drive, action=opts.action;
+      const down=(e)=>{ if(e&&e.cancelable) e.preventDefault(); initAudio(); btn.classList.add('active'); if(driveKey) drive[driveKey]=true; if(id==='btn-a') keyHeld.a=true; if(id==='btn-b') keyHeld.b=true; if(action) pressAction(action); };
+      const up=(e)=>{ if(e&&e.cancelable) e.preventDefault(); btn.classList.remove('active'); if(driveKey) drive[driveKey]=false; if(id==='btn-a') keyHeld.a=false; if(id==='btn-b') keyHeld.b=false; };
+      btn.addEventListener('touchstart',down,{passive:false}); btn.addEventListener('touchend',up,{passive:false}); btn.addEventListener('touchcancel',up,{passive:false}); btn.addEventListener('mousedown',down); btn.addEventListener('mouseup',up); btn.addEventListener('mouseleave',up); }
+    bindButton('btn-up',{action:'up',drive:'up'}); bindButton('btn-down',{action:'down',drive:'down'}); bindButton('btn-left',{action:'left',drive:'left'}); bindButton('btn-right',{action:'right',drive:'right'}); bindButton('btn-a',{action:'a'}); bindButton('btn-b',{action:'b'}); bindButton('btn-select',{action:'select'}); bindButton('btn-start',{action:'start'});
+
+    function initChampionshipStandings(){ championshipStandings=[]; championshipStandings.push({name:'TU',color:playerColor,isPlayer:true,points:0}); for(let k=0;k<NUM_RIVALS;k++){ championshipStandings.push({name:RIVAL_NAMES[k],color:RIVAL_COLORS[k%RIVAL_COLORS.length],isPlayer:false,points:0}); } }
+    function awardChampionshipPoints(){ const f=[]; f.push({ref:getPlayerStanding(),dist:playerTotalDist()}); rivals.forEach(r=>f.push({ref:getRivalStanding(r.idx),dist:r.totalDist})); f.sort((a,b)=>b.dist-a.dist); f.forEach((x,p)=>{ if(x.ref) x.ref.points+=POINTS_TABLE[p]||0; }); }
+    function getPlayerStanding(){ return championshipStandings.find(s=>s.isPlayer); }
+    function getRivalStanding(idx){ return championshipStandings.find(s=>!s.isPlayer&&s.name===RIVAL_NAMES[idx]); }
+    function playerTotalDist(){ return (lap-1)*track.lengthUnits+position; }
+
+    // ===== SALVATAGGIO REALE (localStorage): veicolo, colore, gara corrente e punti =====
+    function saveChampionship(){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify({v:3,vehicleType,playerColorIndex,playerColor,championshipIndex,standings:championshipStandings})); hasSavedGame=true; return true; }catch(e){ return false; } }
+    function loadChampionship(){ try{ const raw=localStorage.getItem(SAVE_KEY); if(!raw) return false; const d=JSON.parse(raw); vehicleType=d.vehicleType||'car'; phys=VEHICLE[vehicleType]; playerColorIndex=d.playerColorIndex||0; playerColor=d.playerColor||PLAYER_COLORS[0].v; championshipIndex=d.championshipIndex||0; championshipStandings=d.standings||[]; return true; }catch(e){ return false; } }
+    function checkSavedGame(){ try{ hasSavedGame=!!localStorage.getItem(SAVE_KEY); }catch(e){ hasSavedGame=false; } }
+    checkSavedGame();
+
+    function update(dt){
+      if(saveFlashMs>0) saveFlashMs-=dt;
+      if(state==='SPLASH'){ splashTime+=dt; return; }
+      if(state==='COUNTDOWN'){ countdownMs-=dt; updateEngineSound(0); if(countdownMs<=0){ state='RACING'; playSound(880,'triangle',0.25); } return; }
+      if(state!=='RACING'){ updateEngineSound(0); return; }
+      raceTimeMs+=dt;
+      if(isAccel()) speed+=phys.accel; else if(isBrake()) speed-=phys.braking; else speed-=phys.decel;
+      speed=Math.max(0,Math.min(speed,phys.maxSpeed)); updateEngineSound(speed/phys.maxSpeed);
+      const sr=speed/phys.maxSpeed; position+=speed*POS_FACTOR;
+      if(position>=track.lengthUnits){ position-=track.lengthUnits; lap++; if(lap>totalLaps){ finishRace(); return; } playSound(900,'triangle',0.3); }
+      const seg=segAt(position);
+      if(drive.left) playerX-=phys.steer*(0.3+sr); if(drive.right) playerX+=phys.steer*(0.3+sr);
+      playerX-=seg.curve*0.008*sr; playerX=Math.max(-1.6,Math.min(1.6,playerX));
+      if(Math.abs(playerX)>1.0){ speed*=0.96; if(speed>40&&Math.random()<0.2) playSound(100,'sawtooth',0.05); }
+      updateRivals(); handleCollisions(); updatePlayerPosition();
+    }
+    function updateRivals(){ rivals.forEach(r=>{ const rSeg=segAt(r.pos); const cf=1-Math.min(0.35,Math.abs(rSeg.curve)*0.06); r.curSpeed+=(r.baseSpeed*cf-r.curSpeed)*0.05; r.offset-=rSeg.curve*0.004; r.offset=Math.max(-0.8,Math.min(0.8,r.offset)); r.pos+=r.curSpeed*POS_FACTOR; r.totalDist+=r.curSpeed*POS_FACTOR; if(r.pos>=track.lengthUnits){ r.pos-=track.lengthUnits; r.lap++; } }); }
+    function handleCollisions(){ rivals.forEach(r=>{ let rel=r.pos-position; if(rel>track.lengthUnits/2) rel-=track.lengthUnits; if(rel<-track.lengthUnits/2) rel+=track.lengthUnits; if(Math.abs(rel)<35&&Math.abs(playerX-r.offset)<0.42){ speed*=0.55; playSound(80,'sawtooth',0.15); if(playerX>r.offset) playerX+=0.15; else playerX-=0.15; } }); track.obstacles.forEach(ob=>{ let rel=ob.pos-position; if(rel>track.lengthUnits/2) rel-=track.lengthUnits; if(rel<-track.lengthUnits/2) rel+=track.lengthUnits; if(Math.abs(rel)<30&&Math.abs(playerX-ob.offset)<0.32){ speed*=0.4; playSound(70,'sawtooth',0.2); if(playerX>ob.offset) playerX+=0.1; else playerX-=0.1; } }); }
+    function updatePlayerPosition(){ const pT=playerTotalDist(); let ahead=0; rivals.forEach(r=>{ if(r.totalDist>pT) ahead++; }); playerPos=ahead+1; }
+    function finishRace(){ speed=0; updateEngineSound(0); playSound(1000,'triangle',0.4); setTimeout(()=>playSound(1200,'triangle',0.4),200); if(raceMode==='championship') awardChampionshipPoints(); state='FINISH'; }
+    function afterFinish(){ if(raceMode==='championship'){ state='STANDINGS'; standingsReturn='ADVANCE'; } else { state='MENU'; menuIndex=0; } }
+    function afterStandings(){ if(standingsReturn==='PRERACE'){ state='PRERACE'; return; } championshipIndex++; if(championshipIndex>=CHAMP_TOTAL){ state='MENU'; menuIndex=0; raceMode='single'; return; } state='PRERACE'; preraceIndex=0; }
+
+    function fmtTime(ms){ const tt=Math.floor(ms/1000); const m=Math.floor(tt/60); const s=tt%60; return `${m}:${s<10?'0':''}${s}`; }
+    function estimatedTotalMs(){ const avg=phys.maxSpeed*0.55; const ups=avg*POS_FACTOR*60; return ((track.lengthUnits*totalLaps)/ups)*1000; }
+
+    function draw(){
+      switch(state){ case 'SPLASH': return drawSplash(); case 'VEHICLE_SELECT': return drawVehicleSelect(); case 'COLOR_SELECT': return drawColorSelect(); case 'MENU': return drawMenu(); case 'TRACK_SELECT': return drawTrackSelect(); case 'PRERACE': return drawPrerace(); case 'STANDINGS': return drawStandings(); }
+      drawScene(); if(state==='COUNTDOWN') drawCountdown(); if(state==='PAUSE') drawPause(); if(state==='FINISH') drawFinish(); if(showInfoOverlay&&state==='RACING') drawInfoOverlay();
+    }
+
+    function px(x,y,w,h,color){ ctx.fillStyle=color; ctx.fillRect(x,y,w,h); }
+    function drawSplash(){
+      const bands=['#241a4a','#3a2a6a','#6a3a7a','#c0506a','#f08050','#ffb060'];
+      for(let i=0;i<bands.length;i++) px(0,i*15,320,15,bands[i]);
+      px(130,50,60,60,'#ffe070'); px(124,56,72,48,'#ffe070'); px(136,44,48,72,'#ffe070'); px(150,70,20,20,'#fff2b0');
+      for(let b=0;b<10;b++){ const bx=b*34, bh=20+((b*29)%40); px(bx,120-bh,30,bh,'#2a1c40'); }
+      px(0,150,320,170,'#3a3a44');
+      for(let i=0;i<11;i++){ const w=8+i*26; px(160-w,150+i*16,w*2,16, i%2?'#4a4a56':'#42424e'); }
+      for(let i=0;i<9;i++){ const yy=150+i*18; px(158,yy,4,12,'#ffd84a'); }
+      drawCarBig(160,262,3.0,'#1aa3f0');
+      ctx.textAlign='center';
+      ctx.fillStyle='#5a0000'; ctx.font='bold 32px monospace'; ctx.fillText('CRUDO',163,35);
+      ctx.fillStyle='#dc0000'; ctx.fillText('CRUDO',160,32);
+      ctx.fillStyle='#7a5a00'; ctx.font='bold 24px monospace'; ctx.fillText('RACING',162,60);
+      ctx.fillStyle='#ffd84a'; ctx.fillText('RACING',160,58);
+      if(Math.floor(splashTime/450)%2===0){ ctx.fillStyle='#ffffff'; ctx.font='bold 13px monospace'; ctx.fillText('>> '+t('pressStart')+' <<',160,138); }
+      ctx.fillStyle='#00e5ff'; ctx.font='bold 9px monospace'; ctx.fillText(`${t('langLabel')}: ${lang.toUpperCase()}`,160,316);
+      ctx.textAlign='left';
+    }
+    function drawCarBig(cx,cy,s,color){
+      px(cx-30*s,cy+20*s,60*s,4*s,'rgba(0,0,0,0.3)');
+      px(cx-30*s,cy-2*s,60*s,20*s,color);
+      px(cx-24*s,cy-20*s,48*s,20*s,color);
+      px(cx-20*s,cy-17*s,40*s,15*s,'#000');
+      px(cx-28*s,cy+3*s,14*s,7*s,'#cc2020'); px(cx-27*s,cy+4*s,5*s,5*s,'#ff8040');
+      px(cx+14*s,cy+3*s,14*s,7*s,'#cc2020'); px(cx+22*s,cy+4*s,5*s,5*s,'#ff8040');
+      px(cx-8*s,cy+3*s,16*s,7*s,'#fff');
+      px(cx-30*s,cy+13*s,60*s,4*s,'#5a2a9a'); px(cx-30*s,cy+16*s,60*s,2*s,'#c02020');
+      px(cx-32*s,cy+16*s,10*s,8*s,'#111'); px(cx+22*s,cy+16*s,10*s,8*s,'#111');
+      px(cx-30*s,cy+18*s,6*s,4*s,'#888'); px(cx+24*s,cy+18*s,6*s,4*s,'#888');
+    }
+    function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt; r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b)); return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0'); }
+
+    function drawScene(){ const theme=track.theme,horizonY=140,roadHeight=180; const g=ctx.createLinearGradient(0,0,0,horizonY); g.addColorStop(0,theme.sky[0]); g.addColorStop(1,theme.sky[1]); ctx.fillStyle=g; ctx.fillRect(0,0,320,horizonY); drawCelestial(theme,horizonY); const seg=segAt(position); drawBackground(theme,horizonY,seg.curve*10); drawRoad(theme,horizonY,roadHeight); drawWorldSprites(horizonY,roadHeight); drawPlayerVehicle(); drawHUD(); }
+    function drawCelestial(theme,horizonY){ if(theme.moon){ for(let i=0;i<40;i++){ ctx.fillStyle='#fff'; ctx.fillRect((i*977)%320,(i*613)%(horizonY-20),1,1); } ctx.fillStyle='#f4f4d0'; ctx.beginPath(); ctx.arc(255,45,22,0,Math.PI*2); ctx.fill(); ctx.fillStyle=theme.sky[0]; ctx.beginPath(); ctx.arc(247,40,20,0,Math.PI*2); ctx.fill(); } else if(theme.night){ for(let i=0;i<50;i++){ ctx.fillStyle='#fff'; ctx.fillRect((i*977)%320,(i*613)%(horizonY-20),1,1); } } else if(theme.sunset){ ctx.fillStyle='#ff5a2a'; ctx.beginPath(); ctx.arc(160,horizonY-10,34,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,180,90,0.4)'; ctx.beginPath(); ctx.arc(160,horizonY-10,50,0,Math.PI*2); ctx.fill(); } else { ctx.fillStyle='rgba(255,255,220,0.9)'; ctx.beginPath(); ctx.arc(260,40,20,0,Math.PI*2); ctx.fill(); } }
+    function drawBackground(theme,horizonY,co){ switch(theme.scenery){ case 'buildings': case 'buildingsLit': return drawBuildings(theme,horizonY,co,theme.scenery==='buildingsLit'); case 'sea': case 'seaSunset': return drawSea(theme,horizonY,co); case 'snow': return drawSnowMountains(theme,horizonY,co); case 'dunes': case 'dunesNight': return drawDunes(theme,horizonY,co); default: return drawHills(theme,horizonY,co); } }
+    function drawHills(theme,horizonY,co){ ctx.fillStyle=theme.hills.dark; ctx.beginPath(); ctx.moveTo(0,horizonY); ctx.lineTo(80+co,115); ctx.lineTo(200+co,115); ctx.lineTo(320,horizonY); ctx.fill(); ctx.fillStyle=theme.hills.light; ctx.beginPath(); ctx.moveTo(40+co,horizonY); ctx.lineTo(130+co,122); ctx.lineTo(250+co,horizonY); ctx.fill(); }
+    function drawBuildings(theme,horizonY,co,lit){ const baseY=horizonY; for(let b=0;b<12;b++){ const bw=22,bx=((b*30)+co*0.5)%340-10,bh=35+((b*37)%55); ctx.fillStyle=b%2===0?theme.hills.dark:theme.hills.light; ctx.fillRect(bx,baseY-bh,bw,bh); for(let wy=baseY-bh+4;wy<baseY-4;wy+=8){ for(let wx=bx+3;wx<bx+bw-3;wx+=7){ ctx.fillStyle=lit?((Math.floor(wx+wy+b)%3===0)?'#ffe27a':'#33334a'):'#2a3550'; ctx.fillRect(wx,wy,3,4); } } } }
+    function drawSea(theme,horizonY,co){ ctx.fillStyle=theme.hills.dark; ctx.fillRect(0,horizonY-30,320,30); ctx.fillStyle=theme.hills.light; for(let w=0;w<8;w++){ const wy=horizonY-26+w*3,off=(w%2===0)?0:15; ctx.fillRect((off+co)%40,wy,12,1); ctx.fillRect((off+60+co)%320,wy,12,1); ctx.fillRect((off+180+co)%320,wy,12,1); } ctx.fillStyle=theme.sunset?'#7a5a70':'#2a8030'; ctx.beginPath(); ctx.moveTo(120+co,horizonY-30); ctx.lineTo(150+co,horizonY-45); ctx.lineTo(190+co,horizonY-30); ctx.fill(); }
+    function drawSnowMountains(theme,horizonY,co){ ctx.fillStyle=theme.hills.dark; ctx.beginPath(); ctx.moveTo(0,horizonY); ctx.lineTo(70+co,95); ctx.lineTo(150+co,horizonY); ctx.fill(); ctx.beginPath(); ctx.moveTo(140+co,horizonY); ctx.lineTo(220+co,90); ctx.lineTo(320+co,horizonY); ctx.fill(); ctx.fillStyle=theme.hills.light; ctx.beginPath(); ctx.moveTo(55+co,110); ctx.lineTo(70+co,95); ctx.lineTo(85+co,110); ctx.fill(); ctx.beginPath(); ctx.moveTo(205+co,105); ctx.lineTo(220+co,90); ctx.lineTo(235+co,105); ctx.fill(); }
+    function drawDunes(theme,horizonY,co){ ctx.fillStyle=theme.hills.dark; ctx.beginPath(); ctx.moveTo(0,horizonY); ctx.quadraticCurveTo(80+co,108,170+co,horizonY); ctx.fill(); ctx.fillStyle=theme.hills.light; ctx.beginPath(); ctx.moveTo(120+co,horizonY); ctx.quadraticCurveTo(220+co,112,320,horizonY); ctx.fill(); }
+    function drawRoad(theme,horizonY,roadHeight){ let dx=0; const camX=playerX*120; for(let i=0;i<roadHeight;i++){ const perspective=i/roadHeight; const lookAhead=position+(1-perspective)*800; const seg=segAt(lookAhead); dx+=seg.curve*perspective*0.8; const hillLift=(seg.hill||0)*perspective*25; const roadWidth=ROAD_WIDTH_BASE+perspective*ROAD_WIDTH_PERSP; const centerX=160-camX*perspective+dx; const y=horizonY+i-hillLift; const leftGrass=centerX-roadWidth,rightGrass=centerX+roadWidth; const isAlt=Math.floor(lookAhead/40)%2===0;
+      ctx.fillStyle=isAlt?theme.grass.light:theme.grass.dark; ctx.fillRect(0,y,320,1);
+      const edgeW=Math.max(2,roadWidth*0.14); ctx.fillStyle=theme.edge; ctx.fillRect(leftGrass-edgeW,y,roadWidth*2+edgeW*2,1);
+      ctx.fillStyle=isAlt?theme.road.light:theme.road.dark; ctx.fillRect(leftGrass,y,roadWidth*2,1);
+      ctx.fillStyle=isAlt?theme.kerb.a:theme.kerb.b; const kw=Math.max(1.5,roadWidth*0.1); ctx.fillRect(leftGrass-kw,y,kw,1); ctx.fillRect(rightGrass,y,kw,1);
+      if(isAlt && roadWidth>30){ ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fillRect(centerX-1,y,2,1); }
+      if(seg.hasSign&&i%35===0){ const signX=seg.signSide===-1?leftGrass-15:rightGrass+5; ctx.fillStyle='#000'; ctx.fillRect(signX+4,y-10,2,10); ctx.fillStyle=theme.kerb.a; ctx.fillRect(signX,y-12,10,5); } } }
+    function drawWorldSprites(horizonY,roadHeight){ const sprites=[]; track.obstacles.forEach(ob=>{ let rel=ob.pos-position; if(rel<0) rel+=track.lengthUnits; if(rel>0&&rel<800) sprites.push({kind:'obstacle',rel,data:ob}); }); rivals.forEach(r=>{ let rel=r.pos-position; if(rel<0) rel+=track.lengthUnits; if(rel>0&&rel<800) sprites.push({kind:'rival',rel,data:r}); }); sprites.sort((a,b)=>b.rel-a.rel); sprites.forEach(sp=>{ const perspective=1-(sp.rel/800); const y=horizonY+perspective*roadHeight; if(sp.kind==='rival') drawRivalVehicle(sp.data,perspective,y); else drawObstacle(sp.data,perspective,y); }); }
+    function spriteX(offset,perspective){ return 160-(playerX-offset)*120*perspective; }
+    function drawRivalVehicle(r,perspective,y){ const x=spriteX(r.offset,perspective); const S=(10+perspective*46)/34; if(vehicleType==='scooter') drawScooterSprite(x,y,S*1.0,r.color); else drawCarSprite(x,y,S,r.color); }
+    function drawCarSprite(cx,cy,S,color){
+      const u=S;
+      px(cx-16*u,cy-2*u,32*u,12*u,color);
+      px(cx-12*u,cy-12*u,24*u,10*u,color);
+      px(cx-10*u,cy-10*u,20*u,7*u,'#000');
+      px(cx-15*u,cy+1*u,8*u,4*u,'#cc2020');
+      px(cx+7*u,cy+1*u,8*u,4*u,'#cc2020');
+      px(cx-4*u,cy+1*u,8*u,4*u,'#fff');
+      px(cx-16*u,cy+8*u,32*u,2*u,'#5a2a9a');
+      px(cx-17*u,cy+9*u,6*u,5*u,'#111'); px(cx+11*u,cy+9*u,6*u,5*u,'#111');
+    }
+    function drawScooterSprite(cx,cy,S,color){
+      const u=S; const dark=shade(color,-35);
+      px(cx-9*u,cy+13*u,18*u,3*u,'rgba(0,0,0,0.3)');
+      px(cx-4*u,cy+4*u,8*u,11*u,'#1a1a1a');
+      px(cx-2*u,cy+7*u,4*u,5*u,'#666');
+      px(cx-9*u,cy-2*u,18*u,8*u,color);
+      px(cx-7*u,cy+4*u,14*u,4*u,dark);
+      px(cx-2*u,cy-1*u,4*u,3*u,'#cc2020');
+      px(cx-6*u,cy-8*u,12*u,5*u,'#2a2a2a');
+      px(cx-6*u,cy-18*u,12*u,11*u,'#3a4a6a');
+      px(cx-8*u,cy-15*u,3*u,8*u,'#33405c');
+      px(cx+5*u,cy-15*u,3*u,8*u,'#33405c');
+      px(cx-5*u,cy-27*u,10*u,10*u,'#e8e8ec');
+      px(cx-5*u,cy-27*u,10*u,3*u,'#ffffff');
+      px(cx-5*u,cy-19*u,10*u,2*u,'#333');
+      px(cx-9*u,cy-13*u,2*u,2*u,'#222'); px(cx+7*u,cy-13*u,2*u,2*u,'#222');
+    }
+    function drawObstacle(ob,perspective,y){ const x=spriteX(ob.offset,perspective); const s=(10+perspective*46)*ob.h; ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(x,y,s*0.45,s*0.12,0,0,Math.PI*2); ctx.fill(); ctx.lineWidth=Math.max(1.5,s*0.06); ctx.strokeStyle='#000'; switch(ob.type){
+      case 'cone': ctx.fillStyle='#ff7a00'; ctx.beginPath(); ctx.moveTo(x,y-s); ctx.lineTo(x-s*0.42,y); ctx.lineTo(x+s*0.42,y); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle='#fff'; ctx.fillRect(x-s*0.28,y-s*0.55,s*0.56,s*0.16); break;
+      case 'palm': ctx.fillStyle='#7a4a1a'; ctx.fillRect(x-s*0.09,y-s,s*0.18,s); ctx.strokeRect(x-s*0.09,y-s,s*0.18,s); ctx.fillStyle='#18b020'; ctx.beginPath(); ctx.arc(x,y-s,s*0.55,0,Math.PI*2); ctx.fill(); ctx.stroke(); break;
+      case 'tree': ctx.fillStyle='#6a4020'; ctx.fillRect(x-s*0.11,y-s*0.5,s*0.22,s*0.5); ctx.strokeRect(x-s*0.11,y-s*0.5,s*0.22,s*0.5); ctx.fillStyle='#12a02a'; ctx.beginPath(); ctx.moveTo(x,y-s*1.05); ctx.lineTo(x-s*0.5,y-s*0.3); ctx.lineTo(x+s*0.5,y-s*0.3); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+      case 'cactus': ctx.fillStyle='#38b048'; ctx.beginPath(); ctx.rect(x-s*0.12,y-s,s*0.24,s); ctx.rect(x-s*0.4,y-s*0.6,s*0.28,s*0.14); ctx.rect(x+s*0.12,y-s*0.78,s*0.28,s*0.14); ctx.fill(); ctx.stroke(); break;
+    } ctx.lineWidth=1; }
+    function drawPlayerVehicle(){ const cx=160; if(vehicleType==='scooter'){ if(track.theme.night) drawHeadlights(cx,270); drawScooterSprite(cx,256,2.4,playerColor); } else { if(track.theme.night) drawHeadlights(cx,268); drawCarSprite(cx,256,2.6,playerColor); } }
+    function drawHeadlights(cx,y){ ctx.fillStyle='rgba(255,255,180,0.15)'; ctx.beginPath(); ctx.moveTo(cx-6,y-20); ctx.lineTo(cx-60,150); ctx.lineTo(cx+60,150); ctx.lineTo(cx+6,y-20); ctx.fill(); }
+    function drawHUD(){ ctx.fillStyle='#101010'; ctx.fillRect(0,0,320,22); ctx.textAlign='left'; ctx.fillStyle='#00e5ff'; ctx.font='bold 10px monospace'; ctx.fillText('SPEED:',6,15); ctx.fillStyle='#fff'; ctx.fillText(`${Math.floor(speed)}`,46,15); ctx.fillStyle='#f8d820'; ctx.fillText(`${t('lap').toUpperCase()} ${lap}/${totalLaps}`,120,15); ctx.fillStyle='#ff4444'; ctx.fillText(`POS ${playerPos}/${NUM_RACERS}`,235,15); }
+    function drawInfoOverlay(){ ctx.fillStyle='rgba(0,0,0,0.78)'; ctx.fillRect(30,40,260,160); ctx.strokeStyle='#00e5ff'; ctx.strokeRect(30,40,260,160); ctx.fillStyle='#00e5ff'; ctx.font='bold 14px monospace'; ctx.textAlign='center'; ctx.fillText(t('raceInfo'),160,62); ctx.font='bold 11px monospace'; ctx.fillStyle='#fff'; ctx.textAlign='left'; const totalMs=estimatedTotalMs(),remaining=Math.max(0,totalMs-raceTimeMs); const lapProgress=Math.floor((position/track.lengthUnits)*100); ctx.fillText(`${t('track')}: ${themeName(track.themeKey)}`,45,88); ctx.fillText(`${t('raceDuration')}: ${fmtTime(raceTimeMs)}`,45,106); ctx.fillText(`${t('estDuration')}: ${fmtTime(totalMs)}`,45,124); ctx.fillText(`${t('timeLeft')} ~ ${fmtTime(remaining)}`,45,142); ctx.fillText(`${t('position')}: ${playerPos} / ${NUM_RACERS}`,45,160); ctx.fillText(`${t('lap')} ${lap}/${totalLaps} (${lapProgress}%)`,45,178); }
+    // COUNTDOWN senza nome pista
+    function drawCountdown(){ ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(0,0,320,320); const n=Math.ceil(countdownMs/1000); ctx.fillStyle=n<=1?'#00ff00':'#ffcc00'; ctx.font='bold 90px monospace'; ctx.textAlign='center'; ctx.fillText(n>0?n:t('go'),160,200); ctx.textAlign='left'; }
+    function drawPause(){ ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,320,320); ctx.textAlign='center'; ctx.fillStyle='#fff'; ctx.font='bold 26px monospace'; ctx.fillText(t('pause'),160,96); const items=pauseItems(); ctx.font='bold 15px monospace'; items.forEach((key,idx)=>{ const o=t(key); const y=140+idx*32; if(idx===pauseIndex){ ctx.fillStyle='#00e5ff'; ctx.fillText('> '+o+' <',160,y); } else { ctx.fillStyle='#aaa'; ctx.fillText(o,160,y); } }); if(saveFlashMs>0){ ctx.fillStyle='#00ff88'; ctx.font='bold 11px monospace'; ctx.fillText(t('savedOk'),160,255); } ctx.fillStyle='#666'; ctx.font='bold 9px monospace'; ctx.fillText(t('navChooseConfirm'),160,278); ctx.textAlign='left'; }
+    function drawFinish(){ ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(0,0,320,320); ctx.textAlign='center'; ctx.fillStyle='#f8d820'; ctx.font='bold 26px monospace'; ctx.fillText(t('finish'),160,120); ctx.fillStyle='#fff'; ctx.font='bold 14px monospace'; ctx.fillText(`${t('position')}: ${playerPos} / ${NUM_RACERS}`,160,155); ctx.fillText(`${t('time')}: ${fmtTime(raceTimeMs)}`,160,178); ctx.font='bold 11px monospace'; if(raceMode==='championship'){ ctx.fillStyle='#00e5ff'; ctx.fillText(`${t('raceOf')} ${championshipIndex+1}/${CHAMP_TOTAL}  -  ${t('aForStandings')}`,160,220); } else ctx.fillText(t('aForMenu'),160,220); ctx.textAlign='left'; }
+    function drawStandings(){ ctx.fillStyle='#0c1020'; ctx.fillRect(0,0,320,320); ctx.textAlign='center'; ctx.fillStyle='#f8d820'; ctx.font='bold 14px monospace'; const last=championshipIndex>=CHAMP_TOTAL-1&&standingsReturn==='ADVANCE'; ctx.fillText(last?t('finalStandings'):t('standings'),160,20); const sorted=[...championshipStandings].sort((a,b)=>b.points-a.points); ctx.font='bold 9px monospace'; ctx.textAlign='left'; sorted.forEach((s,idx)=>{ const y=38+idx*17; ctx.fillStyle=s.color; ctx.fillRect(18,y-7,8,8); ctx.fillStyle=s.isPlayer?'#00e5ff':'#ddd'; ctx.fillText(`${(idx+1).toString().padStart(2,' ')}. ${s.name}`,32,y); ctx.textAlign='right'; ctx.fillText(`${s.points} pt`,300,y); ctx.textAlign='left'; }); ctx.textAlign='center'; ctx.fillStyle='#888'; ctx.font='bold 9px monospace'; ctx.fillText(t('continueA'),160,312); ctx.textAlign='left'; }
+    function drawPrerace(){ ctx.fillStyle='#101828'; ctx.fillRect(0,0,320,320); ctx.textAlign='center'; ctx.fillStyle='#f8d820'; ctx.font='bold 15px monospace'; ctx.fillText(t('championship'),160,34); ctx.fillStyle='#fff'; ctx.font='bold 12px monospace'; ctx.fillText(`${t('raceOf')} ${championshipIndex+1} ${t('of')} ${CHAMP_TOTAL}`,160,60); ctx.fillStyle='#00e5ff'; ctx.font='bold 14px monospace'; ctx.fillText(themeName(CHAMPIONSHIP_ORDER[championshipIndex]),160,84); ctx.fillStyle='#aaa'; ctx.font='bold 10px monospace'; ctx.fillText(t('raceStarting'),160,104); const items=preraceItems(); ctx.font='bold 13px monospace'; items.forEach((key,idx)=>{ const o=t(key); const y=140+idx*30; if(idx===preraceIndex){ ctx.fillStyle='#00e5ff'; ctx.fillText('> '+o+' <',160,y); } else { ctx.fillStyle='#bbb'; ctx.fillText(o,160,y); } }); if(saveFlashMs>0){ ctx.fillStyle='#00ff88'; ctx.font='bold 11px monospace'; ctx.fillText(t('savedOk'),160,285); } ctx.fillStyle='#666'; ctx.font='bold 9px monospace'; ctx.fillText(t('navChoose'),160,305); ctx.textAlign='left'; }
+    function drawVehicleSelect(){ ctx.fillStyle='#101828'; ctx.fillRect(0,0,320,320); ctx.textAlign='center'; ctx.fillStyle='#dc0000'; ctx.font='bold 20px monospace'; ctx.fillText(t('title'),160,44); ctx.fillStyle='#f8d820'; ctx.font='bold 13px monospace'; ctx.fillText(t('chooseVehicle'),160,74); [t('cars'),t('scooters')].forEach((o,idx)=>{ const y=140+idx*38; ctx.font='bold 17px monospace'; if(idx===menuIndex){ ctx.fillStyle='#00e5ff'; ctx.fillText('> '+o+' <',160,y); } else { ctx.fillStyle='#aaa'; ctx.fillText(o,160,y); } }); if(menuIndex===0) drawCarSprite(160,246,2.0,'#1aa3f0'); else drawScooterSprite(160,248,2.0,'#1aa3f0'); ctx.fillStyle='#7ad0ff'; ctx.font='bold 10px monospace'; ctx.fillText(`${t('langLabel')}: ${lang.toUpperCase()}  (${t('toggleLangHint')})`,160,290); ctx.fillStyle='#666'; ctx.font='bold 9px monospace'; ctx.fillText(t('navChoose'),160,307); ctx.textAlign='left'; }
+    function drawColorSelect(){ ctx.fillStyle='#101828'; ctx.fillRect(0,0,320,320); ctx.textAlign='center'; ctx.fillStyle='#f8d820'; ctx.font='bold 14px monospace'; ctx.fillText(t('chooseColor'),160,28); const cols=4; PLAYER_COLORS.forEach((c,idx)=>{ const cx=60+(idx%cols)*67,cy=64+Math.floor(idx/cols)*54; ctx.fillStyle=c.v; ctx.fillRect(cx-20,cy-16,40,28); if(idx===menuIndex){ ctx.strokeStyle='#00e5ff'; ctx.lineWidth=3; ctx.strokeRect(cx-22,cy-18,44,32); ctx.lineWidth=1; } }); ctx.fillStyle='#fff'; ctx.font='bold 13px monospace'; ctx.fillText(colorName(menuIndex),160,196); if(vehicleType==='car') drawCarSprite(160,250,2.2,PLAYER_COLORS[menuIndex].v); else drawScooterSprite(160,252,2.1,PLAYER_COLORS[menuIndex].v); ctx.fillStyle='#666'; ctx.font='bold 9px monospace'; ctx.fillText(t('navColorHint'),160,306); ctx.textAlign='left'; }
+    function drawMenu(){ ctx.fillStyle='#101828'; ctx.fillRect(0,0,320,320); ctx.textAlign='center'; ctx.fillStyle='#dc0000'; ctx.font='bold 22px monospace'; ctx.fillText(t('title'),160,48); ctx.fillStyle='#f8d820'; ctx.font='bold 11px monospace'; ctx.fillText(`${vehicleType==='car'?t('cars'):t('scooters')} - ${colorName(playerColorIndex)}`,160,70); const items=menuMainItems(); ctx.font='bold 14px monospace'; items.forEach((key,idx)=>{ const it=t(key); const y=104+idx*26; if(idx===menuIndex){ ctx.fillStyle='#00e5ff'; ctx.fillText('> '+it+' <',160,y); } else { ctx.fillStyle='#aaa'; ctx.fillText(it,160,y); } }); ctx.fillStyle='#7ad0ff'; ctx.font='bold 9px monospace'; ctx.fillText(`${t('langLabel')}: ${lang.toUpperCase()} (${t('toggleLangHint')})`,160,236); ctx.fillStyle='#666'; ctx.fillText(t('controlsHint'),160,256); ctx.fillText(t('changeVehicle'),160,272); ctx.textAlign='left'; }
+    function drawTrackSelect(){ ctx.fillStyle='#101828'; ctx.fillRect(0,0,320,320); ctx.textAlign='center'; ctx.fillStyle='#f8d820'; ctx.font='bold 15px monospace'; ctx.fillText(t('chooseTrack'),160,26); ctx.font='bold 11px monospace'; BASE_TRACKS.forEach((key,idx)=>{ const y=50+idx*23; const label=`${idx+1}. ${themeName(key)}`; if(idx===menuIndex){ ctx.fillStyle='#00e5ff'; ctx.fillText('> '+label,160,y); } else { ctx.fillStyle='#bbb'; ctx.fillText(label,160,y); } }); ctx.fillStyle='#666'; ctx.font='bold 9px monospace'; ctx.fillText(t('navBack'),160,300); ctx.textAlign='left'; }
+
+    let lastTime=performance.now();
+    function gameLoop(now){ let dt=now-lastTime; lastTime=now; if(dt>100) dt=100; try{ update(dt); draw(); }catch(err){ console.error(err); } requestAnimationFrame(gameLoop); }
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
