@@ -975,7 +975,34 @@
     // ============================================================
     //  GESTIONE INPUT
     // ============================================================
+
+    // Vibrazione del cellulare (Vibration API).
+    // Sicura: se il dispositivo/browser non la supporta non fa nulla.
+    function vibrate(ms) {
+      try {
+        if (typeof navigator !== "undefined" &&
+            typeof navigator.vibrate === "function") {
+          navigator.vibrate(ms);
+        }
+      } catch (e) { /* ignora: la vibrazione e' un extra non essenziale */ }
+    }
+
+    // Evita vibrazioni continue quando un tasto (A/B) resta premuto
+    // e la tastiera genera eventi keydown ripetuti.
+    let lastVibrateAt = 0;
+    function vibrateActionKey() {
+      const now = (typeof performance !== "undefined") ? performance.now() : Date.now();
+      if (now - lastVibrateAt < 120) return;
+      lastVibrateAt = now;
+      vibrate(30);
+    }
+
     function pressAction(action) {
+      // Vibra ad ogni pressione di A o B, in qualunque momento del gioco.
+      if (action === "a" || action === "b") {
+        vibrateActionKey();
+      }
+
       switch (state) {
         case "SPLASH":
           if (action === "start" || action === "a") {
@@ -1506,6 +1533,7 @@
           return;
         }
         playSound(900, "triangle", 0.3);
+        vibrate(60); // fine giro
       }
 
       const seg = segAt(position);
@@ -1520,6 +1548,7 @@
         speed *= 0.955;
         if (speed > 40 && Math.random() < 0.2) {
           playSound(100, "sawtooth", 0.05);
+          vibrate(15); // sbandata / fuori strada
         }
       }
 
@@ -1552,6 +1581,7 @@
         if (Math.abs(rel) < 35 && Math.abs(playerX - r.offset) < 0.42) {
           speed *= 0.7;
           playSound(80, "sawtooth", 0.15);
+          vibrate(90); // tamponamento con avversario
           if (playerX > r.offset) playerX += 0.13;
           else playerX -= 0.13;
         }
@@ -1572,6 +1602,7 @@
       updateEngineSound(0);
       playSound(1000, "triangle", 0.4);
       setTimeout(function () { playSound(1200, "triangle", 0.4); }, 200);
+      vibrate([80, 60, 80, 60, 160]); // traguardo: pattern festoso
       if (raceMode === "championship") {
         awardChampionshipPoints();
       }
