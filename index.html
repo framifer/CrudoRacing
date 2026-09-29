@@ -273,72 +273,101 @@
         max-height: 94vh;
       }
 
-      /* Colonna sinistra: d-pad + SELECT */
+      /* Colonna sinistra: 3 zone verticali
+         alto = vuoto | centro = SELECT | basso = d-pad */
       #controller {
         order: 1;
         flex: 0 0 auto;
         width: auto;
         height: 100%;
-        flex-direction: column;
+        display: grid;
+        grid-template-rows: 1fr 1fr 1fr;
         align-items: center;
-        justify-content: center;
-        gap: 26px;
+        justify-items: center;
+        gap: 0;
         padding: 10px 16px;
         border-top: none;
         border-right: 4px solid #555;
       }
 
+      /* la sezione .controls-top contiene il d-pad: va in fondo (riga 3) */
       .controls-top {
+        grid-row: 3;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         height: auto;
+        width: 100%;
       }
 
-      #controller .dpad {
-        width: 160px;
-        height: 160px;
-      }
-      #controller .dpad-up,
-      #controller .dpad-down {
-        left: 56px;
-        width: 48px;
-        height: 56px;
-      }
-      #controller .dpad-left,
-      #controller .dpad-right {
-        top: 56px;
-        width: 56px;
-        height: 48px;
-      }
-
-      /* SELECT (spostato via JS sotto il d-pad) senza rotazione */
+      /* SELECT al centro (riga 2), senza rotazione */
       #controller #select-wrap {
+        grid-row: 2;
         transform: rotate(0deg);
       }
 
-      /* Colonna destra: START in alto, poi A e B (spostati via JS) */
+      /* In orizzontale START non si mostra: il suo contenitore residuo
+         (#controls-bottom, che resta dentro la colonna sinistra) va nascosto. */
+      #controller #controls-bottom {
+        display: none;
+      }
+
+      #controller .dpad {
+        width: 150px;
+        height: 150px;
+      }
+      #controller .dpad-up,
+      #controller .dpad-down {
+        left: 52px;
+        width: 46px;
+        height: 54px;
+      }
+      #controller .dpad-left,
+      #controller .dpad-right {
+        top: 52px;
+        width: 54px;
+        height: 46px;
+      }
+
+      /* Colonna destra: 3 zone verticali
+         alto = vuoto | centro = A | basso = B */
       #controller-right {
         order: 3;
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-rows: 1fr 1fr 1fr;
         align-items: center;
-        justify-content: center;
-        gap: 30px;
+        justify-items: center;
         background-color: var(--gb-body);
         padding: 10px 18px;
         height: 100%;
         border-left: 4px solid #555;
       }
 
+      /* START in alto (riga 1), senza rotazione */
       #controller-right #start-wrap {
+        grid-row: 1;
         transform: rotate(0deg);
       }
+
+      /* .action-buttons (contiene A e B) occupa le righe centro+basso
+         e le distribuisce: A al centro, B in basso. */
       #controller-right .action-buttons {
+        grid-row: 2 / 4;
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
         transform: rotate(0deg);
+        gap: 0;
+      }
+      #controller-right .btn-a-container {
+        margin: 0;
+        order: 1;   /* A in alto della coppia (zona centrale) */
       }
       #controller-right .btn-b-container {
-        margin-top: 46px;
+        margin: 0;
+        order: 2;   /* B sotto (zona bassa) */
       }
     }
 
@@ -376,7 +405,7 @@
           <div class="btn-round-container btn-b-container">
             <button class="btn-round" id="btn-b">B</button>
           </div>
-          <div class="btn-round-container">
+          <div class="btn-round-container btn-a-container">
             <button class="btn-round" id="btn-a">A</button>
           </div>
         </div>
@@ -2538,8 +2567,8 @@
     // Riorganizza i comandi tra layout verticale e orizzontale.
     //  - VERTICALE: tutto torna alle posizioni originali della scocca Game Boy.
     //  - ORIZZONTALE: schermo al centro,
-    //      SINISTRA  = d-pad (#controller) + SELECT,
-    //      DESTRA    = START + A + B (#controller-right).
+    //      SINISTRA = (vuoto in alto) | SELECT al centro | d-pad in basso,
+    //      DESTRA   = START in alto | A al centro | B in basso.
     (function () {
       const controllerLeft = document.getElementById("controller");
       const controllerRight = document.getElementById("controller-right");
@@ -2552,20 +2581,18 @@
       // Posizioni originali (verticale) per il ripristino.
       const portraitParentActions = actionButtons.parentNode;
       const portraitNextActions = actionButtons.nextSibling;
-      const portraitSelectNext = selectWrap.nextSibling; // start-wrap
-      const portraitStartNext = startWrap.nextSibling;
 
       const landscapeQuery = window.matchMedia("(orientation: landscape)");
 
       function applyLayout() {
         if (landscapeQuery.matches) {
-          // ----- SINISTRA: SELECT sopra il d-pad -----
+          // ----- SINISTRA: SELECT al centro (il d-pad resta in #controller) -----
           if (selectWrap.parentNode !== controllerLeft) {
             controllerLeft.insertBefore(selectWrap, controllerLeft.firstChild);
           }
-          // ----- DESTRA: START in alto, poi A/B -----
+          // ----- DESTRA: START in alto, A al centro, B in basso -----
           if (startWrap.parentNode !== controllerRight) {
-            controllerRight.appendChild(startWrap);
+            controllerRight.insertBefore(startWrap, controllerRight.firstChild);
           }
           if (actionButtons.parentNode !== controllerRight) {
             controllerRight.appendChild(actionButtons);
@@ -2575,7 +2602,7 @@
           if (actionButtons.parentNode !== portraitParentActions) {
             portraitParentActions.insertBefore(actionButtons, portraitNextActions);
           }
-          // Rimetti SELECT e START dentro il loro contenitore originale, nell'ordine giusto.
+          // Rimetti SELECT e START nel loro contenitore originale, nell'ordine giusto.
           if (selectWrap.parentNode !== controlsBottom || startWrap.parentNode !== controlsBottom) {
             controlsBottom.appendChild(selectWrap);
             controlsBottom.appendChild(startWrap);
