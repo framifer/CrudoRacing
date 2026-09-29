@@ -259,25 +259,32 @@
         border-radius: 20px;
       }
 
-      /* Schermo al centro */
+      /* Schermo al centro: occupa SOLO lo spazio che resta tra le due colonne
+         (flex-basis 0 + min-width 0 gli impedisce di espellere i comandi). */
       #screen-container {
         order: 2;
-        flex: 1 1 auto;
+        flex: 1 1 0;
+        min-width: 0;
         height: 100%;
         padding: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
 
       #game-wrapper {
         width: auto;
-        height: 94%;
-        max-height: 94vh;
+        height: 96%;
+        max-height: 96%;
+        max-width: 100%;
       }
 
       /* Colonna sinistra: 3 zone verticali
          alto = vuoto | centro = SELECT | basso = d-pad */
       #controller {
         order: 1;
-        flex: 0 0 auto;
+        flex: 0 0 30vw;
+        max-width: 220px;
         width: auto;
         height: 100%;
         display: grid;
@@ -285,7 +292,7 @@
         align-items: center;
         justify-items: center;
         gap: 0;
-        padding: 10px 16px;
+        padding: 10px 12px;
         border-top: none;
         border-right: 4px solid #555;
       }
@@ -333,12 +340,14 @@
          alto = vuoto | centro = A | basso = B */
       #controller-right {
         order: 3;
+        flex: 0 0 30vw;
+        max-width: 220px;
         display: grid;
         grid-template-rows: 1fr 1fr 1fr;
         align-items: center;
         justify-items: center;
         background-color: var(--gb-body);
-        padding: 10px 18px;
+        padding: 10px 12px;
         height: 100%;
         border-left: 4px solid #555;
       }
