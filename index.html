@@ -245,6 +245,11 @@
       letter-spacing: 1px;
     }
 
+    /* Il controller destro esiste solo in landscape (default nascosto).
+       DEVE stare PRIMA del @media landscape, altrimenti sovrascriverebbe
+       la regola display:grid della modalita' orizzontale. */
+    #controller-right { display: none; }
+
     /* ============================================================ */
     /* ===== MODALITA ORIZZONTALE (LANDSCAPE) ===== */
     /* ============================================================ */
@@ -379,9 +384,6 @@
         order: 2;   /* B sotto (zona bassa) */
       }
     }
-
-    /* Il controller destro esiste solo in landscape */
-    #controller-right { display: none; }
   </style>
 </head>
 
